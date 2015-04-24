@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>MZhou's blog</title>
+    <script type="text/javascript">var _jf = _jf || [];_jf.push(['p','2099']);_jf.push(['_setFont','sourcehansans-sc-normal','css','.sourcehansans-sc-normal']);_jf.push(['_setFont','sourcehansans-sc-normal','css','.entry']);_jf.push(['_setFont','sourcehansans-sc-normal','alias','sourcehansans']);_jf.push(['_setFont','sourcehansans-sc-normal','english','Georgia']);_jf.push(['_setFont','sourcehansans-sc-normal','weight',350]);_jf.push(['_setFont','sourcehansans-sc-bold','css','.sourcehansans-sc-bold']);_jf.push(['_setFont','sourcehansans-sc-bold','alias','sourcehansans-sc-bold']);_jf.push(['_setFont','sourcehansans-sc-bold','weight',700]);(function(f,q,c,h,e,i,r,d){var k=f._jf;if(k.constructor===Object){return}var l,t=q.getElementsByTagName("html")[0],a=function(u){for(var v in k){if(k[v][0]==u){if(false===k[v][1].call(k)){break}}}},j=/\S+/g,o=/[\t\r\n\f]/g,b=/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g,g="".trim,s=g&&!g.call("\uFEFF\xA0")?function(u){return u==null?"":g.call(u)}:function(u){return u==null?"":(u+"").replace(b,"")},m=function(y){var w,z,v,u,x=typeof y==="string"&&y;if(x){w=(y||"").match(j)||[];z=t[c]?(" "+t[c]+" ").replace(o," "):" ";if(z){u=0;while((v=w[u++])){if(z.indexOf(" "+v+" ")<0){z+=v+" "}}t[c]=s(z)}}},p=function(y){var w,z,v,u,x=arguments.length===0||typeof y==="string"&&y;if(x){w=(y||"").match(j)||[];z=t[c]?(" "+t[c]+" ").replace(o," "):"";if(z){u=0;while((v=w[u++])){while(z.indexOf(" "+v+" ")>=0){z=z.replace(" "+v+" "," ")}}t[c]=y?s(z):""}}},n;k.push(["_eventActived",function(){p(h);m(e)}]);k.push(["_eventInactived",function(){p(h);m(i)}]);k.addScript=n=function(u,A,w,C,E,B){E=E||function(){};B=B||function(){};var x=q.createElement("script"),z=q.getElementsByTagName("script")[0],v,y=false,D=function(){x.src="";x.onerror=x.onload=x.onreadystatechange=null;x.parentNode.removeChild(x);x=null;a("_eventInactived");B()};if(C){v=setTimeout(function(){D()},C)}x.type=A||"text/javascript";x.async=w;x.onload=x.onreadystatechange=function(G,F){if(!y&&(!x.readyState||/loaded|complete/.test(x.readyState))){y=true;if(C){clearTimeout(v)}x.src="";x.onerror=x.onload=x.onreadystatechange=null;x.parentNode.removeChild(x);x=null;if(!F){setTimeout(function(){E()},200)}}};x.onerror=function(H,G,F){if(C){clearTimeout(v)}D();return true};x.src=u;z.parentNode.insertBefore(x,z)};a("_eventPreload");m(h);n(r,"text/javascript",false,3000)})(this,this.document,"className","jf-loading","jf-active","jf-inactive","//ds.justfont.com/js/stable/v/4.9.1/id/78221283867");</script>
+    <link rel="stylesheet" href="./assets/entry.css" />
+    <link rel="stylesheet" href="./assets/highlight.css" />
+</head>
+<body>
+    <div class="entry">
+        <h1 id="react-diff-">React diff算法</h1>
+<p>React是facebook开发的一个用于UI开发的基础库。它自底向上重新设计了，为了实现高性能。在这篇文章中将展示React的diff算法是如何来优化你的app性能的。</p>
+<h2 id="diff-">diff算法</h2>
+<p>在我们详细解释算法之前，有必要了解下React是如何工作的。</p>
+<pre><code>var MyComponent = React.createClass({
+    render: function() {
+        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.props.first) {
+            <span class="hljs-keyword">return</span> &lt;<span class="hljs-keyword">div</span> className=<span class="hljs-string">"first"</span>&gt;&lt;span&gt;A Span&lt;<span class="hljs-regexp">/span&gt;&lt;/</span><span class="hljs-keyword">div</span>&gt;;
+        }
+        <span class="hljs-keyword">else</span> {
+            <span class="hljs-keyword">return</span> &lt;<span class="hljs-keyword">div</span> className=<span class="hljs-string">"second"</span>&gt;&lt;p&gt;A Paragraph&lt;<span class="hljs-regexp">/p&gt;&lt;/</span><span class="hljs-keyword">div</span>&gt;;
+        }
+    }
+});
+</code></pre><p>上面的代码是用于绘制你的ui的。注意render方法返回的不是真正的DOM节点，而是轻量级的Javascript对象，简称虚拟DOM。</p>
+<p>React就是使用这些虚拟DOM来计算出需要实现UI更新所需要的最少DOM操作。例如，如果我们先绘制<code>&lt;MyComponent first={true} /&gt;</code>，然后再用<code>&lt;MyComponent first={false} /&gt;</code>替换它，最后再删掉它。如下是我们需要做的DOM操作：</p>
+<ol>
+<li>默认DOM中是空的，需要创建一个节点<code>&lt;div className=&quot;first&quot;&gt;&lt;span&gt;A Span&lt;/span&gt;&lt;/div&gt;</code></li>
+<li>修改<code>MyComponent</code>的<code>first</code>属性为<code>false</code>需要做的DOM操作如下：<ol>
+<li>替换className属性：<code>className=&quot;first&quot;</code> 替换为 <code>className=&quot;second&quot;</code></li>
+<li>替换节点：<code>&lt;span&gt;A Span&lt;/span&gt;</code>替换为<code>&lt;p&gt;A Paragraph&lt;/p&gt;</code></li>
+</ol>
+</li>
+<li>删除<code>MyComponent</code>需要做的DOM操作是删除节点<code>&lt;div className=&quot;second&quot;&gt;&lt;p&gt;A Paragraph&lt;/p&gt;&lt;/div&gt;</code></li>
+</ol>
+<h3 id="-">同层对比</h3>
+<p>查找两个随机树之间的最小差异是一个O(n^3)问题。如你所想，这么高复杂度的算法是无法满足我们的需求的。React使用了一种更为简单且直观的算法使得算法复杂度优化至O(n)。</p>
+<p>React只会逐层对比两颗随机树。这大大降低了diff算法的复杂度。并且在web组件中很少会将节点移动到不同的层级，经常只会在同一层级中移动。</p>
+<p><img src="./react-diff-algorithm/1.png" alt=""></p>
+<h3 id="-">列表</h3>
+<p>假设一个组件中原本有5个子组件，然后我们插入一个新的组件。 如果我们不知道新节点插入的位置，那么仅仅通过树的对比，我们很难找到两个树之间的对应关系。</p>
+<p>默认情况下，React只能按照顺序将两组节点对应起来，可以预见，这样是很不准确的。这时候你可以提供一个key属性来帮助React找到更为精确的对应关系。实际使用中，我们也很容易为列表中的节点们找到唯一的key。</p>
+<p><img src="./react-diff-algorithm/2.png" alt=""></p>
+<h3 id="-">组件</h3>
+<p>一个React的app通常由许多用户自定义的组件组成，然后最终转换成一个由许多div组成的树。React的diff算法也考虑了这种情况，它仅仅会匹配相同class（此处不是指dom的className，而是组件的类别）的组件。</p>
+<p>例如如果一个<code>&lt;Header&gt;</code>组件被一个<code>&lt;ExampleBlock&gt;</code>组件替换了，React会删除header然后创建一个example block。我们不想浪费宝贵的时间去计算两个根本不可能相似的组件。</p>
+<p><img src="./react-diff-algorithm/3.png" alt=""></p>
+<h2 id="-">事件代理</h2>
+<p>为DOM节点添加事件绑定是一件很慢并且消耗内存的事情。为了解决这个问题，React使用了一个常见的解决方案：事件代理。不过，React不仅仅做了这些，它走的更远。它实现了一个与W3C标准兼容的事件系统。这意味着你不会遇到IE8的那些事件绑定bug。所有的事件在各个浏览器上都是一致的。</p>
+<p>让我来简单解释下它是怎么做的。首先在文档的根节点上绑定一个事件监听器。当一个事件触发时，浏览器会给到事件发生的目标节点（<code>event.target</code>）。为了让事件在DOM继承树之间传播，React不会迭代查找虚拟DOM的继承树。React要求每个组件都只有一个根节点，这个根节点有一个唯一的id。我们可以通过简单的字符串操作拿到所有祖先的id。把事件监听器的存储到一个map中，id作为map的key。我们发现这样获取事件监听器的性能比把事件监听器绑定到虚拟DOM上要快。如下是一个事件的分发过程：</p>
+<pre><code>clickCaptureListeners[<span class="hljs-link_label">'a'</span>](<span class="hljs-link_url">event</span>);
+clickCaptureListeners[<span class="hljs-link_label">'a.b'</span>](<span class="hljs-link_url">event</span>);
+clickCaptureListeners[<span class="hljs-link_label">'a.b.c'</span>](<span class="hljs-link_url">event</span>);
+clickBubbleListeners[<span class="hljs-link_label">'a.b.c'</span>](<span class="hljs-link_url">event</span>);
+clickBubbleListeners[<span class="hljs-link_label">'a.b'</span>](<span class="hljs-link_url">event</span>);
+clickBubbleListeners[<span class="hljs-link_label">'a'</span>](<span class="hljs-link_url">event</span>);
+</code></pre><p>浏览器为每一次监听器的回调都创建了一个新的event对象。这样开发者就可以保存甚至修改event对象，并且不会出现冲突。然后，这就需要分配大量的内存。React在一开始就分配了一个对象池，这可以显著减少垃圾回收的触发。</p>
+<h2 id="-">绘制</h2>
+<h3 id="-">批量操作</h3>
+<p>当你在一个组件上调用其<code>setState</code>方法时，React会将其标记为dirty。然后在事件轮询结束时，React会查找dirty的组件并将其重新绘制。</p>
+<p>这就意味着不论有多少此<code>setState</code>操作，React都只会在事件循环结束时批量更新DOM。这就是React高性能的关键。用通用js方法来实现这种批量更新是很麻烦的，而React默认会帮你搞定这些。</p>
+<p><img src="./react-diff-algorithm/4.png" alt=""></p>
+<h3 id="-">子树重绘</h3>
+<p>当组件的<code>setState</code>方法被调用时，组件会重新构建它的子节点。如果你在根元素上调用了<code>setState</code>方法，那么整个App都会被重绘。所有的组件的render方法都会被调用，即使它们并没有改变。虽然这听起来很吓人，好像很不高效。但实际上还可以，因为它根本没有修改真正的DOM。</p>
+<p>首先，让我们讨论下UI界面的展示。因为空间是有限的，我们通常会同时按照顺序显示成百上千个元素。Javascript已经足够快了，万全可以hold住普通的业务逻辑需求。</p>
+<p>另外一个重要点是，当你写React代码时不要经常调用root节点的setState方法来修改东西。你可以在触发事件的组件或是其父组件上调用setState方法。通常你不需要调用root的<code>setState</code>方法。这意味着你需要将UI改变控制在用户交互触发的区域。</p>
+<p><img src="./react-diff-algorithm/5.png" alt=""></p>
+<h3 id="-">优化子树的绘制</h3>
+<p>你可以控制是否阻止子树的重绘，只需要覆盖组件的方法即可，方法如下：</p>
+<pre><code>boolean <span class="hljs-function"><span class="hljs-title">shouldComponentUpdate</span><span class="hljs-params">(objectnextProps, objectnextState)</span></span>
+</code></pre><p>通过对比组件前后的props和state，你就可以判断这个组件是否真的有必要重绘。只要实现妥当，会大大提升性能。</p>
+<p>为了实现这个对比，你就需要对比Javascript对象。这会遇到很多问题，例如对象的对比是深度对比还是仅仅做浅层对比？如果我们用的深度对比，那么是应该使用不可变的（immutable）数据机构还是做深度拷贝呢？</p>
+<p>还有一件事情你需要记住：<code>shouldComponentUpdate</code>函数会经常被调用，所以一定要确保你实现的函数比绘制组件所需要的时间更少。不然就没有优化的价值了。</p>
+<p><img src="./react-diff-algorithm/6.png" alt=""></p>
+<h2 id="-">结论</h2>
+<p>React所使用的技术并不新颖，我们很早就知道DOM操作很慢，批量读写可以提高性能，事件代理更快。</p>
+<p>人们还在不厌其烦的叙述这些优化方法，那是因为在实战中这些还是很难实现的。React之所以性能好，是因为这些优化点都已经默认支持。除非你的脑门儿被夹了，否则你很难用React写出慢的app。</p>
+<p>基于React的性能优化准则非常简单易懂：每次<code>setState</code>方法的调用都会重绘整个子树。如果你想优化性能，那么尽量在较“低”的节点上调用<code>setState</code>方法，或者自己实现<code>shouldComponentUpdate</code>方法来阻止整个子树的重绘。</p>
+
+    </div>
+    <div class="date">
+        2015-04-24 17:12 @MZhou
+    </div>
+    <div class="others">
+        <a href=".&#x2F;react-diff-algorithm.html">react-diff-algorithm.md</a>
+    </div>
+</body>
+</html>

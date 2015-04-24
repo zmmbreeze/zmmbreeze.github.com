@@ -1,0 +1,19 @@
+{
+  "name": "blog",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "BSD-2-Clause",
+  "dependencies": {
+    "marked": "~0.3.3",
+    "node-static": "~0.7.6",
+    "mustache": "~2.0.0",
+    "pygmentize-bundled": "~2.3.0",
+    "highlight.js": "~8.5.0",
+    "moment": "~2.10.2"
+  }
+}
