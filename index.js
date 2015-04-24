@@ -4,6 +4,7 @@ var mustache = require('mustache');
 var fs = require('fs');
 var path = require('path');
 var moment = require('moment');
+var FontSpider = require('font-spider');
 var highlight = require('highlight.js');
 
 var template = fs.readFileSync('./template.mustache', {
@@ -42,6 +43,8 @@ var getMarkdowns = function () {
     });
     return result;
 };
+
+// generate blog
 var markdowns = getMarkdowns();
 markdowns.forEach(function (markData) {
     var data = {
@@ -54,6 +57,13 @@ markdowns.forEach(function (markData) {
     console.log('Write:' + markData.destpath);
 });
 
+// generate font
+var fontspider = new FontSpider('./*.html');
+console.log('Minify fonts.');
+
+
+
+// static server
 var file = new static.Server('.');
 require('http').createServer(function (request, response) {
     request.addListener('end', function () {

@@ -1,0 +1,11 @@
+@font-face {
+  font-family: 'sourcehansans';
+  src: url('./font/sourcehansans.eot');
+  src:
+    url('./font/sourcehansans.eot?#font-spider') format('embedded-opentype'),
+    url('./font/sourcehansans.woff') format('woff'),
+    url('./font/sourcehansans.ttf') format('truetype'),
+    url('./font/sourcehansans.svg') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
