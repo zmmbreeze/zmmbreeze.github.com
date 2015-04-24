@@ -1,11 +1,24 @@
 @font-face {
-  font-family: 'sourcehansans';
-  src: url('./font/sourcehansans.eot');
-  src:
-    url('./font/sourcehansans.eot?#font-spider') format('embedded-opentype'),
-    url('./font/sourcehansans.woff') format('woff'),
-    url('./font/sourcehansans.ttf') format('truetype'),
-    url('./font/sourcehansans.svg') format('svg');
-  font-weight: normal;
-  font-style: normal;
+    font-family: 'sourcehansans';
+    src: url('./font/sourcehansans.eot');
+    src:
+        url('./font/sourcehansans.eot?#font-spider') format('embedded-opentype'),
+        url('./font/sourcehansans.woff') format('woff'),
+        url('./font/sourcehansans.ttf') format('truetype'),
+        url('./font/sourcehansans.svg') format('svg');
+    font-weight: normal;
+    font-style: normal;
 }
+
+@font-face {
+    font-family: 'notoserif';
+    src: url('./font/notoserif.eot');
+    src:
+        url('./font/notoserif.eot?#font-spider') format('embedded-opentype'),
+        url('./font/notoserif.woff') format('woff'),
+        url('./font/notoserif.ttf') format('truetype'),
+        url('./font/notoserif.svg') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
+

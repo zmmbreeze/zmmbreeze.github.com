@@ -58,8 +58,9 @@ markdowns.forEach(function (markData) {
 });
 
 // generate font
-var fontspider = new FontSpider('./*.html');
-console.log('Minify fonts.');
+var fontspider = new FontSpider('./*.html').then(function () {
+    console.log('Minify fonts done.');
+});
 
 
 
