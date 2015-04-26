@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>iOS 5 Mobile Safari中label的bug</title>
+    <link rel="stylesheet" href="./assets/blog.css" />
+    <link rel="stylesheet" href="./assets/entry.css" />
+    <link rel="stylesheet" href="./assets/highlight.css" />
+</head>
+<body>
+<div class="main">
+    <a class="back" href="./">MZhou's blog</a>
+    <div class="entry">
+        <h1 id="ios-5-mobile-safari-label-bug">iOS 5 Mobile Safari中label的bug</h1>
+<p>前几天在codepen上看到了不错<a href="http://codepen.io/jetpacmonkey/pen/ktIJz">CSS用法</a>，今天打算在写<a href="http://nodejs.in">新博客</a>的时候使用类似的思路：</p>
+<blockquote>
+<p>用input[type=checkbox]来控制同级元素的样式，实现只用CSS来修改样式状态的特性。</p>
+</blockquote>
+<p>做的时候发现iOS 5下此demo无法用，于是发现了label元素的一个bug。我们在写表单的时候，为了实现点击label自动选中input，一般会这么做：</p>
+<pre><code>&lt;<span class="hljs-keyword">label</span> <span class="hljs-keyword">for</span>=<span class="hljs-string">"email"</span>&gt;Email&lt;/<span class="hljs-keyword">label</span>&gt;
+&lt;<span class="hljs-keyword">input</span> <span class="hljs-keyword">type</span>=<span class="hljs-string">"text"</span> id=<span class="hljs-string">"email"</span>/&gt;
+</code></pre><p>这样当用户点击Email文字时，输入框会自动选中，以提高用户体验。但是如果input是checkbox呢？</p>
+<pre><code>&lt;<span class="hljs-keyword">label</span> <span class="hljs-keyword">for</span>=<span class="hljs-string">"sure"</span>&gt;Sure&lt;/<span class="hljs-keyword">label</span>&gt;
+&lt;<span class="hljs-keyword">input</span> <span class="hljs-keyword">type</span>=<span class="hljs-string">"checkbox"</span> id=<span class="hljs-string">"sure"</span>/&gt;
+</code></pre><p>此时在iOS 5中，点击文字Sure，checkbox不会自动勾选！搜索之后得到<a href="http://stackoverflow.com/questions/5421659/html-label-command-doesnt-work-in-iphone-browser">解决方案</a>：为label加个onclick属性，它就可以正常触发input[type=checkbox]了。</p>
+<pre><code>&lt;<span class="hljs-keyword">label</span> <span class="hljs-keyword">for</span>=<span class="hljs-string">"sure"</span> onlcick&gt;Sure&lt;/<span class="hljs-keyword">label</span>&gt;
+&lt;<span class="hljs-keyword">input</span> <span class="hljs-keyword">type</span>=<span class="hljs-string">"checkbox"</span> id=<span class="hljs-string">"sure"</span>/&gt;
+</code></pre><p>本来以为OK了，于是写了个<a href="http://nodejs.in/demo/label_ios_test.html">测试用例</a>。却发现还需要另外一个条件才能触发label的行为。而且这不仅仅针对checkbox，<strong>对所有的input都需要这两个条件</strong>：</p>
+<ol>
+<li>label有onclick属性（即绑定了click事件），或者是它的父元素绑定了click事件。</li>
+<li>label的css cursor值必须是pointer</li>
+</ol>
+<p>另外有个注意点：不同的父元素绑定click又会有影响。如果是document.body绑定，那么手指按下的时候label会有样式上的变化（onclick也有此效果）。如果是一般的父div则没有此效果。</p>
+<p>猜测此bug同样影响了iOS 5上的其他浏览器（注：这里只测试了Chrome）。iOS6上已经修复了此bug。因为手头没有设备，故没有测试iOS5之前版本是否有此bug。</p>
+<p>最后fork修改原来codepen上的demo，Check it out～ <a href="http://codepen.io/zmmbreeze/pen/AaLFJ">http://codepen.io/zmmbreeze/pen/AaLFJ</a>。</p>
+
+    </div>
+
+    <div class="info">
+        <h1>MZhou&#39;s blog - Taste of life.</h1>
+        <p>
+            <a href="https://github.com/zmmbreeze" target="_blank">zmmbreeze</a> / <a href="https://twitter.com/zhoumm">@zhoumm</a>
+        </p>
+        <p>2015-04-26 20:53</p>
+    </div>
+</div>
+</body>
+</html>

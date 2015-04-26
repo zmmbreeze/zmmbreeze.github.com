@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>浏览器的overflow事件</title>
+    <link rel="stylesheet" href="./assets/blog.css" />
+    <link rel="stylesheet" href="./assets/entry.css" />
+    <link rel="stylesheet" href="./assets/highlight.css" />
+</head>
+<body>
+<div class="main">
+    <a class="back" href="./">MZhou's blog</a>
+    <div class="entry">
+        <h1 id="-overflow-">浏览器的overflow事件</h1>
+<p>Webkit和Firefox其实是原生支持探测元素<a href="http://www.backalleycoder.com/2013/03/14/oft-overlooked-overflow-and-underflow-events/">overflow状态改变的事件</a>。参看这个DEMO：</p>
+<p><p data-height="268" data-theme-id="0" data-slug-hash="otlwj" data-default-tab="result" data-user="zmmbreeze" class='codepen'>See the Pen <a href='http://codepen.io/zmmbreeze/pen/otlwj/'>Way to detect overflow event support and use it with graceful degradation</a> by mzhou (<a href='http://codepen.io/zmmbreeze'>@zmmbreeze</a>) on <a href='http://codepen.io'>CodePen</a>.</p></p>
+<script async src="//assets.codepen.io/assets/embed/ei.js"></script>
+
+<p>Webkit使用的是overflowchanged事件，而Firefox则使用overflow和underflow这两个事件。虽然Webkit只提供了一个事件，但是我们可以通过event对象的属性来知道是overflow还是underflow，甚至知道是垂直方向还是水平方向。而Firefox的两个事件则没法提供溢出方向的信息。</p>
+<p>重要地是IE和旧版的Opera（非webkit内核）是不支持的，也没有什么特别好的fallback方法。所以在使用overflow事件时一定要做好特征检测。在Webkit下，只需判断window有没有OverflowEvent即可。而在Firefox下比较麻烦了。</p>
+<p>查看了Modernizr的源码，发现了使用<a href="http://perfectionkills.com/detecting-event-support-without-browser-sniffing/">setAtrribute来检测Firefox</a>是否支持某个事件的方法。可惜尝试之下发现不能正确检测overflow事件。于是改用创建div并激活overflow事件的方法来判断是否支持。代码如下：</p>
+<pre><code><span class="hljs-keyword">var</span> element = <span class="hljs-built_in">document</span>.createElement(<span class="hljs-string">'div'</span>);
+<span class="hljs-keyword">if</span> (element.addEventListener) {
+  element.style.cssText = <span class="hljs-string">'overflow:scroll;height:1px;width:1px;'</span>;
+  <span class="hljs-built_in">document</span>.body.appendChild(element);
+
+  <span class="hljs-keyword">var</span> overflowSupport = <span class="hljs-literal">false</span>;
+  <span class="hljs-comment">// firefox(tested on 1.5+) support overflow/underflow event</span>
+  element.addEventListener(<span class="hljs-string">'overflow'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">()</span> </span>{
+      overflowSupport = <span class="hljs-literal">true</span>;
+  }, <span class="hljs-literal">false</span>);
+  element.innerHTML = <span class="hljs-string">'&amp;lt;div style=&amp;quot;height:200px;width:1px;&amp;quot;&amp;gt;&amp;lt;/div&amp;gt;'</span>;
+
+  <span class="hljs-keyword">var</span> timeout;
+  <span class="hljs-keyword">var</span> end = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
+      <span class="hljs-keyword">if</span> (end.done) {
+          <span class="hljs-keyword">return</span>;
+      }
+      end.done = <span class="hljs-literal">true</span>;
+
+      <span class="hljs-keyword">if</span> (overflowSupport) {
+          callback(<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">(element, type, cb)</span> </span>{
+              element.addEventListener(type + <span class="hljs-string">'flow'</span>, cb, <span class="hljs-literal">false</span>);
+          });
+      } <span class="hljs-keyword">else</span> {
+          callback();
+      }
+
+      clearTimeout(timeout);
+      <span class="hljs-built_in">document</span>.body.removeChild(element);
+  };
+  <span class="hljs-comment">// Use scroll event to make sure it's right after overflow event.</span>
+  element.addEventListener(<span class="hljs-string">'scroll'</span>, end, <span class="hljs-literal">false</span>);
+  element.scrollTop = <span class="hljs-number">1000</span>;
+  <span class="hljs-comment">// Make sure callback was called, even browser not support scroll event.</span>
+  <span class="hljs-comment">// For example 'opera 11.*'</span>
+  timeout = setTimeout(end, <span class="hljs-number">250</span>);
+}
+</code></pre><p>因为是异步的，所以一定要确保判断结果的动作是在执行过overflow事件回调之后。一个比较简单的方法是使用setTimeout延迟执行。为了保证执行顺序，时间就一定要设置长一点（250ms）。但是这样响应太慢了。幸运地是在Firefox中scroll事件是在overflow事件之后触发的，所以改为在scroll事件的回调函数中做判断。</p>
+<p>如果你有更好的检测方法，请一定告知~ <a href="https://github.com/zmmbreeze/useOverflowEvent">Github</a></p>
+
+    </div>
+
+    <div class="info">
+        <h1>MZhou&#39;s blog - Taste of life.</h1>
+        <p>
+            <a href="https://github.com/zmmbreeze" target="_blank">zmmbreeze</a> / <a href="https://twitter.com/zhoumm">@zhoumm</a>
+        </p>
+        <p>2015-04-26 20:42</p>
+    </div>
+</div>
+</body>
+</html>

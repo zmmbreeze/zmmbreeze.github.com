@@ -1,0 +1,236 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>watch.js 源码解读</title>
+    <link rel="stylesheet" href="./assets/blog.css" />
+    <link rel="stylesheet" href="./assets/entry.css" />
+    <link rel="stylesheet" href="./assets/highlight.css" />
+</head>
+<body>
+<div class="main">
+    <a class="back" href="./">MZhou's blog</a>
+    <div class="entry">
+        <h1 id="watch-js-">watch.js 源码解读</h1>
+<p>用麻雀虽小五脏俱全来描述<a href="https://github.com/melanke/Watch.JS">Watch.js</a>比较合适。“观察者”模式是我们在开发的时候经常需要用到的。使用Watch.js那么我们就可以实现在<em>“每当对象属性改变的时候，执行你的函数”</em>。虽然有很多其他的库可以实现相同的功能，但是Watch.js却可以不改变你平时书写代码的方式，并且实现属性改变的监听功能。</p>
+<h2 id="api">API</h2>
+<p>让我们来看看它的API：</p>
+<pre><code><span class="hljs-comment">//使用任意一种方式定义一个对象</span>
+<span class="hljs-keyword">var</span> ex1 = {
+    attr1: <span class="hljs-string">"initial value of attr1"</span>,
+    attr2: <span class="hljs-string">"initial value of attr2"</span>
+};
+
+<span class="hljs-comment">//针对其中一个属性“attr1”设置“观察者”</span>
+watch(ex1, <span class="hljs-string">"attr1"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span></span>{
+    alert(<span class="hljs-string">"attr1 changed!"</span>);
+});
+
+<span class="hljs-comment">//当“attr1”修改的时候“观察者”函数会被调用</span>
+ex1.attr1 = <span class="hljs-string">"other value"</span>;`&lt;/pre&gt;
+[<span class="hljs-keyword">try</span> demo](http:<span class="hljs-comment">//jsfiddle.net/NbJuh/17/)</span>
+</code></pre><p>Watch.js还提供了其他有用的api：监控多个属性、监控整个对象或移除整一个watch。你可能会想到循环调用，例如：</p>
+<pre><code><span class="hljs-comment">//使用任意一种方式定义一个对象</span>
+<span class="hljs-keyword">var</span> ex1 = {
+    attr1: <span class="hljs-string">"inicial value of attr1"</span>,
+    attr2: <span class="hljs-string">"initial value of attr2"</span>
+};
+
+<span class="hljs-comment">//定义“attr1”属性的监听函数</span>
+watch(ex1, <span class="hljs-string">"attr1"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span></span>{
+    <span class="hljs-comment">//在此域中阻止监听器的调用</span>
+    WatchJS.noMore = <span class="hljs-literal">true</span>;
+    ex1.attr2 = ex1.attr1 + <span class="hljs-string">" + 1"</span>;
+});
+
+<span class="hljs-comment">//给另一个属性定义“监听函数”</span>
+watch(ex1, <span class="hljs-string">"attr2"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span></span>{
+    alert(<span class="hljs-string">"attr2 changes"</span>);
+});
+
+<span class="hljs-comment">//attr1修改的时候，会修改attr2但不会触发attr2的“监听函数”</span>
+ex1.attr1 = <span class="hljs-string">"other value to 1"</span>;
+</code></pre><p><code>WatchJS.noMore = true</code>可以确保在此次监听函数的调用中，对属性的修改不会触发新的监听函数。接下来看看它是如何实现它们的！</p>
+<h2 id="object-defineproperty">Object.defineProperty</h2>
+<p><code>Object.defineProperty</code>是ECMAScript 5标准提供的方法，它允许你在一个对象上定义一个新属性或是修改原有属性的描述符。这个方法接收一个属性描述符，并用它来初始化（或更新）一个属性。例如：</p>
+<pre><code>(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
+    <span class="hljs-keyword">var</span> obj = {},
+        value = <span class="hljs-number">1</span>;
+
+    Object.defineProperty( obj, <span class="hljs-string">"value"</span>, {
+        <span class="hljs-comment">// value: true,</span>
+        <span class="hljs-comment">// writable: false,</span>
+        enumerable: <span class="hljs-literal">true</span>,
+        configurable: <span class="hljs-literal">true</span>,
+        <span class="hljs-keyword">get</span>: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
+            <span class="hljs-keyword">return</span> value;
+        },
+        <span class="hljs-keyword">set</span>: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(v)</span> </span>{
+            value = v);
+        }
+    });
+})();
+</code></pre><p><code>defineProperty</code>的第三个参数是描述符，<code>value</code>设置属性值，<code>writable</code>表示属性是否可写(不会报错，只是写操作不生效)，<code>enumerable</code>表示属性是否可以通过<code>for in</code>迭代获取，<code>configurable</code>表示属性该属性的描述符无法再被定义，并且属性也无法被<code>delete</code>。<code>get</code>和<code>set</code>分别定义属性的access方法，注意不可同时定义属性的accessor和value及writable参数。具体的方法描述参考<a href="https://developer.mozilla.org/zh-CN/docs/JavaScript/Reference/Global_Objects/Object/defineProperty">MDN上的文档</a></p>
+<p>Watch.js利用了属性的accessor方法实现了对属性变化的监听，<a href="https://github.com/melanke/Watch.JS/blob/7a73b0c67e2f274f9671252be212e7d23430290d/src/watch.js">代码</a>如下：</p>
+<pre><code>defineWatcher = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">(obj, prop, watcher)</span> </span>{
+    <span class="hljs-keyword">var</span> val = obj[prop];
+
+    <span class="hljs-comment">// 监听数组的操作函数，用于数组变化的监听</span>
+    watchFunctions(obj, prop);
+
+    <span class="hljs-comment">// 初始化watchers对象，用以存储监听者</span>
+    <span class="hljs-keyword">if</span> (!obj.watchers) {
+        defineProp(obj, <span class="hljs-string">"watchers"</span>, {});
+    }
+
+    <span class="hljs-comment">// 初始化针对此属性的监听者数组</span>
+    <span class="hljs-keyword">if</span> (!obj.watchers[prop]) {
+        obj.watchers[prop] = [];
+    }
+
+    <span class="hljs-comment">// 添加监听者</span>
+    obj.watchers[prop].push(watcher);
+
+    <span class="hljs-keyword">var</span> getter = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">()</span> </span>{
+        <span class="hljs-keyword">return</span> val;
+    };
+
+    <span class="hljs-keyword">var</span> setter = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">(newval)</span> </span>{
+        <span class="hljs-keyword">var</span> oldval = val;
+        val = newval;
+
+        <span class="hljs-comment">// 监听对象上所有属性</span>
+        <span class="hljs-keyword">if</span>(obj[prop]){
+            watchAll(obj[prop], watcher);
+        }
+
+        <span class="hljs-comment">// 监听数组的操作函数</span>
+        watchFunctions(obj, prop);
+
+        <span class="hljs-comment">// 将对象转换成字符串之后判断是否有改变</span>
+        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">JSON</span>.stringify(oldval) !== <span class="hljs-built_in">JSON</span>.stringify(newval)) {
+            <span class="hljs-keyword">if</span> (!WatchJS.noMore){
+                callWatchers(obj, prop, newval, oldval);
+                WatchJS.noMore = <span class="hljs-literal">false</span>;
+            }
+        }
+    };
+
+    <span class="hljs-comment">// 定义accessor</span>
+    defineGetAndSet(obj, prop, getter, setter);
+
+};
+</code></pre><p><code>defineWatcher</code>函数是定义监听者的主要函数，它做了如下几件事情：</p>
+<ol>
+<li>监听数组的操作函数，用于数组变化的监听</li>
+<li>初始化watchers对象，用于存储监听函数</li>
+<li>添加监听函数</li>
+<li>设置accessor<ol>
+<li>setter会监听属性值所有的属性变化</li>
+<li>监听数组的操作函数</li>
+<li>将对象转换成字符串之后判断是否有改变</li>
+<li>如果改变则调用监听函数</li>
+</ol>
+</li>
+</ol>
+<h2 id="-">降级处理</h2>
+<p><code>defineGetAndSet</code>是利用了<code>defineProperty</code>来设置监听函数，如果不支持则会尝试如下方法：</p>
+<pre><code><span class="hljs-built_in">Object</span>.prototype.__defineGetter__.<span class="hljs-keyword">call</span>(obj, propName, getter);
+<span class="hljs-built_in">Object</span>.prototype.__defineSetter__.<span class="hljs-keyword">call</span>(obj, propName, setter);
+</code></pre><p>有些稍微旧版本的先进浏览器可以使用这个方法来设置accessor。如果浏览器还是不支持那么会fallback到设置定时器监控。如下：</p>
+<pre><code><span class="hljs-keyword">var</span> subjects = [];
+
+defineWatcher = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(obj, prop, watcher)</span></span>{
+    <span class="hljs-comment">// 存储当前状态和监听者</span>
+    subjects.push({
+        obj: obj,
+        prop: prop,
+        serialized: <span class="hljs-built_in">JSON</span>.stringify(obj[prop]), <span class="hljs-comment">// 设置当前属性值的序列化值</span>
+        watcher: watcher
+    });
+};
+
+unwatchOne = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">(obj, prop, watcher)</span> </span>{
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i <span class="hljs-keyword">in</span> subjects) {
+        <span class="hljs-keyword">var</span> subj = subjects[i];
+        <span class="hljs-keyword">if</span> (subj.obj == obj &amp;amp;&amp;amp; subj.prop == prop &amp;amp;&amp;amp; subj.watcher == watcher) {
+            subjects.splice(i, <span class="hljs-number">1</span>);
+        }
+    }
+};
+
+callWatchers = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">(obj, prop)</span> </span>{
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i <span class="hljs-keyword">in</span> subjects) {
+        <span class="hljs-keyword">var</span> subj = subjects[i];
+
+        <span class="hljs-keyword">if</span> (subj.obj == obj &amp;amp;&amp;amp; subj.prop == prop) {
+            subj.watcher.call(obj, prop);
+        }
+    }
+};
+
+<span class="hljs-keyword">var</span> loop = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span></span>{
+    <span class="hljs-keyword">for</span>(<span class="hljs-keyword">var</span> i <span class="hljs-keyword">in</span> subjects){
+        <span class="hljs-keyword">var</span> subj = subjects[i];
+        <span class="hljs-comment">// 新的获取序列化值</span>
+        <span class="hljs-keyword">var</span> newSer = <span class="hljs-built_in">JSON</span>.stringify(subj.obj[subj.prop]);
+        <span class="hljs-comment">// 与旧的序列化值判断</span>
+        <span class="hljs-keyword">if</span>(newSer != subj.serialized){
+            <span class="hljs-comment">// 不同则调用监听函数</span>
+            subj.watcher.call(subj.obj, subj.prop, subj.obj[subj.prop], <span class="hljs-built_in">JSON</span>.parse(subj.serialized));
+            <span class="hljs-comment">// 设置新的值</span>
+            subj.serialized = newSer;
+        }
+    }
+};
+setInterval(loop, <span class="hljs-number">50</span>);
+</code></pre><p>这个降级处理是存在bug的，它无法正确处理属性设置之间的间隔。原因在于javascript的线程模型，以及<code>setInterval</code>不是立即能知道更新，有50ms的间隔时间。样例如下：</p>
+<pre><code><span class="hljs-keyword">var</span> obj = {
+   a: <span class="hljs-number">1</span>
+};
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">cb</span><span class="hljs-params">()</span> </span>{
+    <span class="hljs-built_in">console</span>.log(<span class="hljs-keyword">this</span>.a);
+}
+
+watch(obj, <span class="hljs-string">'a'</span>, cb);
+<span class="hljs-built_in">console</span>.log(<span class="hljs-string">'set first'</span>);
+obj.a = <span class="hljs-number">2</span>;
+<span class="hljs-built_in">console</span>.log(<span class="hljs-string">'set second'</span>);
+obj.a = <span class="hljs-number">3</span>;
+</code></pre><p>上面的代码在支持<code>defineProperty</code>的浏览器中执行结果如下：</p>
+<pre><code><span class="hljs-keyword">set</span> <span class="hljs-keyword">first</span>
+<span class="hljs-number">2</span>
+<span class="hljs-keyword">set</span> <span class="hljs-keyword">second</span>
+<span class="hljs-number">3</span>
+</code></pre><p>在不支持的浏览器中执行结果如下：</p>
+<pre><code><span class="hljs-keyword">set</span> <span class="hljs-keyword">first</span>
+<span class="hljs-keyword">set</span> <span class="hljs-keyword">second</span>
+<span class="hljs-number">3</span>
+</code></pre><p>可见<code>setInterval</code>的降级处理是异步的，而<code>defineProperty</code>是同步的。这在一些情况下会导致严重的bug，而且难以调试。所以在真正使用的环境中需要注意！</p>
+<h2 id="-">总结</h2>
+<p>抛开watch.js的bug不谈，它还是有很多可圈可点的地方。使用下来觉得watch.js的优点如下：</p>
+<ol>
+<li>API设计的很好，实用</li>
+<li>不需要特殊的修改定义属性的代码</li>
+<li>支持commonjs的模块标准</li>
+<li>属性为object和array的时候也可以监听</li>
+</ol>
+<p>缺点如下：</p>
+<ol>
+<li>监听整个对象的时候，只能监听到已有属性。监听不到新属性</li>
+<li>对于不支持Object.defineProperty的浏览器，降级方案有小bug</li>
+</ol>
+
+    </div>
+
+    <div class="info">
+        <h1>MZhou&#39;s blog - Taste of life.</h1>
+        <p>
+            <a href="https://github.com/zmmbreeze" target="_blank">zmmbreeze</a> / <a href="https://twitter.com/zhoumm">@zhoumm</a>
+        </p>
+        <p>2015-04-26 20:59</p>
+    </div>
+</div>
+</body>
+</html>

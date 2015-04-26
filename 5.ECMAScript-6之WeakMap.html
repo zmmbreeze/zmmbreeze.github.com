@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>ECMAScript 6之WeakMap</title>
+    <link rel="stylesheet" href="./assets/blog.css" />
+    <link rel="stylesheet" href="./assets/entry.css" />
+    <link rel="stylesheet" href="./assets/highlight.css" />
+</head>
+<body>
+<div class="main">
+    <a class="back" href="./">MZhou's blog</a>
+    <div class="entry">
+        <h1 id="ecmascript-6-weakmap">ECMAScript 6之WeakMap</h1>
+<p>ECMAScript 6中加入了很多新的特性，其中有一个有用的API：WeakMap。<a href="http://www.nczonline.net/blog/2012/11/06/ecmascript-6-collections-part-3-weakmaps/">Nicholas的博文</a>做了详细的介绍。这也是一篇关于WeakMap的笔记。</p>
+<hr>
+<h2 id="-">简介</h2>
+<p><code>WeakMap</code>与<code>Map</code>（另一个ES6的新API）都是键值对象，有着类似的API：<code>set</code>、<code>get</code>、<code>has</code>和<code>delete</code>。为了更好的解释<code>WeakMap</code>，先谈下Javascript中的键值对象。JS中几乎所有可写的对象就可以当作一个键值对象，例如：</p>
+<pre><code><span class="hljs-keyword">var</span> <span class="hljs-keyword">map</span> = {};
+<span class="hljs-keyword">map</span>[<span class="hljs-string">'key'</span>] = <span class="hljs-string">'value'</span>;
+</code></pre><p>但是这样简单的键值对象达不到一个效果：它的键“不能”是对象。之所以打引号是因为并不是不能用对象，而是对象会转换成字符串，如下：</p>
+<pre><code><span class="hljs-keyword">var</span> <span class="hljs-keyword">map</span> = {};
+<span class="hljs-keyword">var</span> key = {};
+<span class="hljs-keyword">map</span>[key] = <span class="hljs-string">'value'</span>;
+<span class="hljs-keyword">map</span>[<span class="hljs-string">'[object Object]'</span>] === <span class="hljs-string">'value'</span>; <span class="hljs-comment">// true</span>
+</code></pre><p>于是ES6就提供了<code>Map</code>与<code>WeakMap</code>的API，可以实现键是对象的情况。但是这引来了另外一个问题，<code>Map</code>是可以通过<code>keys</code>方法来获取其所有的键。这就需要map保留一个对键的强引用，于是就导致了引用释放上的不方便，稍微大意一些就容易造成内存泄漏。</p>
+<p>于是又提供了<code>WeakMap</code>，它的键只能是一个非空（null）对象，而<code>Map</code>的键则还可以是除对象外的原始类型。<code>WeakMap</code>的重要特点在于：对键的引用是弱引用，而不是一般的强引用。看如下例子：</p>
+<pre><code><span class="hljs-built_in">var</span> <span class="hljs-built_in">map</span> <span class="hljs-subst">=</span> <span class="hljs-literal">new</span> WeakMap(),
+element <span class="hljs-subst">=</span> document<span class="hljs-built_in">.</span>querySelector(<span class="hljs-string">".element"</span>);
+
+<span class="hljs-comment">// 对象element作为键，"Original"作为值</span>
+<span class="hljs-built_in">map</span><span class="hljs-built_in">.</span><span class="hljs-built_in">set</span>(element, <span class="hljs-string">"Original"</span>);
+
+<span class="hljs-comment">// 可以通过element获得值</span>
+<span class="hljs-built_in">var</span> value <span class="hljs-subst">=</span> <span class="hljs-built_in">map</span><span class="hljs-built_in">.</span>get(element);
+console<span class="hljs-built_in">.</span><span class="hljs-keyword">log</span>(value);             <span class="hljs-comment">// "Original"</span>
+
+<span class="hljs-comment">// 下面删除对element的强引用</span>
+element<span class="hljs-built_in">.</span>parentNode<span class="hljs-built_in">.</span>removeChild(element);
+element <span class="hljs-subst">=</span> <span class="hljs-built_in">null</span>;
+
+<span class="hljs-comment">// element dom对象被释放</span>
+<span class="hljs-comment">// 已经无法通过element获取“Original”值</span>
+</code></pre><p><code>WeakMap</code>的键只能是非空（null）对象，所以如果你在<code>get</code>方法里面传入null或是undefined之类的值，就会报错：“value is not a non-null object”。它的另外一个特点就是无法获取所有的键，更无法获取size之类的值。</p>
+<p><code>WeakMap</code>一个典型的应用场景就是对于jQuery这样的库，需要维护一个dom列表，存储对应每个dom的数据。这时候使用它就可以达到“dom在文档中被移除的时候，自动释放dom对象”。</p>
+<p>当然ES6目前还没有普及，支持的浏览器仅有Firefox和Chrome。在chrome中你需要到<code>chrome://flags</code>，并且启用“Experimental JavaScript Features”。所以我们需要fallback。</p>
+<h2 id="fallback">Fallback</h2>
+<p>Gozala提供了一个很精妙的<a href="https://gist.github.com/1269991">fallback方案</a>！接下来对它的代码做解读。要实现WeakMap有几个关注点：</p>
+<ol>
+<li>键一定是非空对象</li>
+<li>键无法被获取到</li>
+<li>WeakMap不能保留对键的强引用</li>
+</ol>
+<p>因为这个方案是基于ECMAScript 5的，所以使用了<code>Object.freeze</code>和<code>Object.create</code>之类的API。WeakMap的初始化函数如下：</p>
+<pre><code><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">WeakMap</span>() {</span>
+  <span class="hljs-comment">/**
+  Implementation of harmony `WeakMaps`, in ES5\. This implementation will
+  work only with keys that have configurable `valueOf` property (which is
+  a default for all non-frozen objects).
+  http://wiki.ecmascript.org/doku.php?id=harmony:weak_maps
+  **/</span>
+
+  var privates = Name()
+  <span class="hljs-constant">return</span> Object.freeze(Object.<span class="hljs-built_in">create</span>(WeakMap.prototype, {
+    has: {
+      <span class="hljs-built_in">value</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">has</span>(<span class="hljs-title">object</span>) {</span>
+        <span class="hljs-constant">return</span> <span class="hljs-string">'value'</span> <span class="hljs-operator">in</span> privates(object)
+      },
+      configurable: <span class="hljs-constant">true</span>,
+      enumerable: <span class="hljs-constant">false</span>,
+      writable: <span class="hljs-constant">true</span>
+    },
+    <span class="hljs-built_in">get</span>: {
+      <span class="hljs-built_in">value</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">get</span>(<span class="hljs-title">key</span>, <span class="hljs-title">fallback</span>) {</span>
+        <span class="hljs-constant">return</span> privates(guard(key)).<span class="hljs-built_in">value</span> || fallback
+      },
+      configurable: <span class="hljs-constant">true</span>,
+      enumerable: <span class="hljs-constant">false</span>,
+      writable: <span class="hljs-constant">true</span>
+    },
+    <span class="hljs-built_in">set</span>: {
+      <span class="hljs-built_in">value</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">set</span>(<span class="hljs-title">key</span>, <span class="hljs-title">value</span>) {</span>
+        privates(guard(key)).<span class="hljs-built_in">value</span> = <span class="hljs-built_in">value</span>
+      },
+      configurable: <span class="hljs-constant">true</span>,
+      enumerable: <span class="hljs-constant">false</span>,
+      writable: <span class="hljs-constant">true</span>
+    },
+    <span class="hljs-string">'delete'</span>: {
+      <span class="hljs-built_in">value</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">set</span>(<span class="hljs-title">key</span>) {</span>
+        <span class="hljs-constant">return</span> <span class="hljs-built_in">delete</span> privates(guard(key)).<span class="hljs-built_in">value</span>
+      },
+      configurable: <span class="hljs-constant">true</span>,
+      enumerable: <span class="hljs-constant">false</span>,
+      writable: <span class="hljs-constant">true</span>
+    }
+  }))
+}
+</code></pre><p>使用了<code>Object.create</code>创建了一个继承自WeakMap的新对象，并设置了has,get,set,delete方法。（其实我不太理解delete是个关键字，为什么标准要把它作为WeakMap的方法名之一？）然后使用<code>Object.freeze</code>确保对象无法被改变。避免有人通过<code>map.a = &#39;string&#39;</code>这样或其他方式去修改对象。</p>
+<p>其中的关键点在于<code>var privates = Name()</code>一句。privates方法是用来“依据键获取键值”。</p>
+<p>因为不能保存键的强引用所以需要将键值保存在键上。即WeakMap仅仅是提供了一个“键”与“值”之间的接口，通过WeakMap来设置或获取键对应值。这么一来就容易理解了，具体源代码如下：</p>
+<pre><code>function defineNamespace(object, namespace) {
+  /**
+  Utility function takes <span class="hljs-escape">`o</span>bject<span class="hljs-escape">` </span><span class="hljs-literal">and</span> <span class="hljs-escape">`n</span>amespace<span class="hljs-escape">` </span><span class="hljs-literal">and</span> overrides <span class="hljs-escape">`v</span>alueOf<span class="hljs-escape">`
+</span>  method of <span class="hljs-escape">`o</span>bject<span class="hljs-escape">`,</span> so that when called with <span class="hljs-literal">a</span> <span class="hljs-escape">`n</span>amespace<span class="hljs-escape">` </span>argument,
+  <span class="hljs-escape">`p</span>rivate<span class="hljs-escape">` </span>object associated with this <span class="hljs-escape">`n</span>amespace<span class="hljs-escape">` </span>is returned. <span class="hljs-keyword">If</span> argument
+  is different, <span class="hljs-escape">`v</span>alueOf<span class="hljs-escape">` </span>falls back to original <span class="hljs-escape">`v</span>alueOf<span class="hljs-escape">` </span>property.
+  **/
+
+  // Private inherits from <span class="hljs-escape">`o</span>bject<span class="hljs-escape">`,</span> so that <span class="hljs-escape">`t</span>his.foo<span class="hljs-escape">` </span>will refer to the
+  // <span class="hljs-escape">`o</span>bject.foo<span class="hljs-escape">`.</span> Also, original <span class="hljs-escape">`v</span>alueOf<span class="hljs-escape">` </span>is saved in order to be able to
+  // delegate to it when necessary.
+  var privates = Object.create(object), base = object.valueOf
+<span class="hljs-label">  Object.defineProperty(object, 'valueOf', { value:</span> function valueOf(value) {
+    // <span class="hljs-keyword">If</span> <span class="hljs-escape">`t</span>his<span class="hljs-escape">` </span><span class="hljs-literal">or</span> <span class="hljs-escape">`n</span>amespace<span class="hljs-escape">` </span>is <span class="hljs-literal">not</span> associated with <span class="hljs-literal">a</span> <span class="hljs-escape">`p</span>rivates<span class="hljs-escape">` </span>being
+    // stored we fallback to original <span class="hljs-escape">`v</span>alueOf<span class="hljs-escape">`,</span> otherwise we <span class="hljs-keyword">return</span> privates.
+    <span class="hljs-keyword">return</span> value != namespace || this != object ? base.apply(this, arguments)
+<span class="hljs-label">                                              :</span> privates
+<span class="hljs-label">  }, configurable:</span> <span class="hljs-literal">true</span> })
+  <span class="hljs-keyword">return</span> privates
+}
+
+function Name() {
+  /**
+  Desugared implementation of private names proposal. API is different as
+  it's <span class="hljs-literal">not</span> possible to implement API proposed for harmony with in ES5\. In
+  terms of provided functionality it supposed to be same.
+<span class="hljs-label">  http://wiki.ecmascript.org/doku.php?id=strawman:</span>private_names
+  **/
+
+  var namespace = {}
+  <span class="hljs-keyword">return</span> function name(object) {
+    var privates = object.valueOf(namespace)
+<span class="hljs-label">    return privates !== object ? privates :</span> defineNamespace(object, namespace)
+  }
+}
+
+function guard(key) {
+  /**
+  Utility function to guard WeakMap methods from keys that are <span class="hljs-literal">not</span>
+  <span class="hljs-literal">a</span> non-null objects.
+  **/
+
+  <span class="hljs-keyword">if</span> (key !== Object(key)) throw TypeError(<span class="hljs-string">"value is not a non-null object"</span>)
+  <span class="hljs-keyword">return</span> key
+}
+</code></pre><p>代码中guard方法用于验证键是否是非空对象，又通过重写valueOf方法来获取键对应的存储值的对象。即是如下的引用关系：</p>
+<pre><code>key<span class="hljs-function"> -&gt;</span> valueOf --<span class="hljs-function"><span class="hljs-params">(namespace)</span>--&gt;</span> privates<span class="hljs-function"> --&gt;</span> value
+</code></pre><p>其中的关键点是namespace是一个空对象。为什么呢？因为一个空对象是无法模仿的、是唯一的，如果改用字符串则很容易被知道字符串值的人直接通过<code>key.valueOf(&#39;namespace&#39;)</code>方法获取到privates。</p>
+<p>所以实现WeakMap的核心是“如何构造一个<a href="http://wiki.ecmascript.org/doku.php?id=strawman:private_names">唯一的无法伪造的属性名</a>”。</p>
+<p>Nicolas还在Gozala方案的评论中提到了另外一种实现，具体见<a href="http://code.google.com/p/es-lab/source/browse/trunk/src/ses/WeakMap.js">http://code.google.com/p/es-lab/source/browse/trunk/src/ses/WeakMap.js</a>。我还没有仔细看～</p>
+
+    </div>
+
+    <div class="info">
+        <h1>MZhou&#39;s blog - Taste of life.</h1>
+        <p>
+            <a href="https://github.com/zmmbreeze" target="_blank">zmmbreeze</a> / <a href="https://twitter.com/zhoumm">@zhoumm</a>
+        </p>
+        <p>2015-04-26 21:03</p>
+    </div>
+</div>
+</body>
+</html>

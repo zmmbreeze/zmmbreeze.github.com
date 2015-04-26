@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>{{blogTitle}}</title>
+    <link rel="stylesheet" href="./assets/index.css" />
+</head>
+<body>
+<div class="main">
+    <div class="info">
+        <h1>{{blogTitle}}</h1>
+        <p>
+            <a href="https://github.com/zmmbreeze" target="_blank">zmmbreeze</a> / <a href="https://twitter.com/zhoumm">@zhoumm</a>
+        </p>
+    </div>
+
+    <ul class="list">
+        {{#all}}
+        <li><a href="{{destpath}}">{{title}}</a><small>{{birthtime}}</small></li>
+        {{/all}}
+    </ul>
+</div>
+</body>
+</html>

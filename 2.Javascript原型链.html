@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Javascript 原型链</title>
+    <link rel="stylesheet" href="./assets/blog.css" />
+    <link rel="stylesheet" href="./assets/entry.css" />
+    <link rel="stylesheet" href="./assets/highlight.css" />
+</head>
+<body>
+<div class="main">
+    <a class="back" href="./">MZhou's blog</a>
+    <div class="entry">
+        <h1 id="javascript-">Javascript 原型链</h1>
+<p>本来想写一篇“如何用JS实现面向对象”，发现自己对prototype原型链还是有很多的不理解的地方。先看一张原型链关系图：</p>
+<p><img src="./imgs/2/1.jpg" alt=""></p>
+<p>图片来自mollypages.org。</p>
+<h2 id="prototype-">prototype属性</h2>
+<p>prototype是所有函数都有的一个属性。</p>
+<pre><code><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Man</span><span class="hljs-params">()</span> <span class="hljs-comment">{}</span>
+<span class="hljs-title">console</span>.<span class="hljs-title">log</span><span class="hljs-params">(Man.prototype)</span>;</span> <span class="hljs-comment">// Object{}</span>
+</code></pre><p>prototype 属性使您有能力向对象添加属性和方法。在每个使用每个对象的属性或方法时，js会按照原型链的顺序查找属性，直到找到。</p>
+<pre><code><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">employee</span><span class="hljs-params">(name,job,born)</span> </span>{
+    <span class="hljs-keyword">this</span>.name=name;
+    <span class="hljs-keyword">this</span>.job=job;
+    <span class="hljs-keyword">this</span>.born=born;
+}
+
+<span class="hljs-keyword">var</span> bill = <span class="hljs-keyword">new</span> employee(<span class="hljs-string">"Bill Gates"</span>,<span class="hljs-string">"Engineer"</span>,<span class="hljs-number">1985</span>);
+
+employee.prototype.salary=<span class="hljs-literal">null</span>;
+bill.salary=<span class="hljs-number">20000</span>;
+
+<span class="hljs-built_in">console</span>.log(bill.salary); <span class="hljs-comment">//20000</span>
+</code></pre><p>注意对象是没有prototype属性的，只有函数有。但是一些特有的浏览器（firefox，chrome）通过<strong>proto</strong>属性暴露了原型prototype，如上图。</p>
+<h2 id="new-">new关键字</h2>
+<p>new用于新建一个对象，例如：</p>
+<pre><code><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Man</span><span class="hljs-params">()</span> </span>{}
+<span class="hljs-keyword">var</span> m = <span class="hljs-keyword">new</span> Man();
+</code></pre><p>下面的代码用js模拟了new操作：</p>
+<pre><code><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">newObj</span><span class="hljs-params">(Fun,arguments)</span> </span>{
+    <span class="hljs-keyword">var</span> o = {};
+    <span class="hljs-keyword">if</span> (Fun &amp;amp;&amp;amp; <span class="hljs-keyword">typeof</span> Fun === <span class="hljs-string">"function"</span>) {
+        o.__proto__ = Fun.prototype;
+        Fun.apply(o, <span class="hljs-built_in">arguments</span>);
+        <span class="hljs-keyword">return</span> o;
+    }
+}
+</code></pre><p>从代码中可以看出，首先新建一个对象o，然后修改<strong>proto</strong>指向Fun.prototype，然后以o为上下文(context)执行Fun函数，最后返回o。因为对象的<strong>proto</strong>设置是在new操作中的，所以导致了以下现象：</p>
+<pre><code><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Man</span><span class="hljs-params">()</span> </span>{}
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Father</span><span class="hljs-params">()</span> </span>{
+    <span class="hljs-keyword">this</span>.name=<span class="hljs-string">""</span>
+}
+<span class="hljs-keyword">var</span> m = <span class="hljs-keyword">new</span> Man();
+Man.prototype = <span class="hljs-keyword">new</span> Father();
+<span class="hljs-built_in">console</span>.log(m.name); <span class="hljs-comment">// undefine</span>
+</code></pre><p>至此我们理解了图中的第一层，接下来讲第二、三层。</p>
+<blockquote>
+<p>为何Foo.<strong>proto</strong> !== Foo.prptotype?</p>
+</blockquote>
+<p>这里Foo函数可以看成是Function函数的对象！按照图中第一层的逻辑：对象的<strong>proto</strong>指向其函数的prototype属性，Foo的<strong>proto</strong>应该等于Function.prototype。</p>
+<blockquote>
+<p>那么为什么Function函数和Object函数的<strong>proto</strong>都等于Function.prototype呢？</p>
+</blockquote>
+<p>注意Function和Object都是函数，而所有的函数都是Function函数的对象（有点绕）！所以同上，它们的<strong>proto</strong>应该等于Function.prototype。</p>
+<blockquote>
+<p>为什么o1与o2的<strong>proto</strong>等于Object.prototype呢？</p>
+</blockquote>
+<p>原因与第一层的结构一样，o1,o2是Object函数的对象。</p>
+<p>注意：Function.prototype与Foo.prototype同样是对象，它们也是通过Object函数构建的，所以它们的<strong>proto</strong>也等于Object.prototype。</p>
+<h2 id="object-prototype">Object.prototype</h2>
+<p>Object.prototype值是无法修改，它提供了一些默认的方法。且它的<strong>proto</strong>等于null！</p>
+<pre><code><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Man</span><span class="hljs-params">()</span></span>{
+    <span class="hljs-keyword">this</span>.oo = <span class="hljs-string">"11"</span>;
+}
+<span class="hljs-built_in">Object</span>.prototype = <span class="hljs-keyword">new</span> Man();
+<span class="hljs-built_in">console</span>.log(<span class="hljs-built_in">Object</span>.prototype.oo); <span class="hljs-comment">//undefine</span>
+</code></pre><p>理解Javascript的原型链的重点在于对象、函数、函数的prototype，函数与函数的prototype同时也是对象。</p>
+<p>在JavaScript语言中，所有对象的原型链根节点都是Object.prototype。</p>
+<h2 id="instanceof-">instanceof操作符</h2>
+<p>instanceof是一个二元运算符，如：A instanceof B. 其中，A必须是一个合法的JavaScript对象，B必须是一个合法的JavaScript函数 (function). 判断过程如下：</p>
+<blockquote>
+<p>如果函数B在对象A的原型链 (prototype chain) 中被发现，那么instanceof操作符将返回true，否则返回false.</p>
+</blockquote>
+<p>所以导致了:</p>
+<pre><code><span class="hljs-built_in">Function</span> <span class="hljs-keyword">instanceof</span> <span class="hljs-built_in">Object</span>;     <span class="hljs-comment">//true</span>
+<span class="hljs-built_in">Object</span> <span class="hljs-keyword">instanceof</span> <span class="hljs-built_in">Function</span>;     <span class="hljs-comment">//true</span>
+<span class="hljs-built_in">Function</span> <span class="hljs-keyword">instanceof</span> <span class="hljs-built_in">Function</span>;   <span class="hljs-comment">//true</span>
+<span class="hljs-built_in">Object</span> <span class="hljs-keyword">instanceof</span> <span class="hljs-built_in">Object</span>;       <span class="hljs-comment">//true</span>
+</code></pre><p>这样的情况发生！</p>
+
+    </div>
+
+    <div class="info">
+        <h1>MZhou&#39;s blog - Taste of life.</h1>
+        <p>
+            <a href="https://github.com/zmmbreeze" target="_blank">zmmbreeze</a> / <a href="https://twitter.com/zhoumm">@zhoumm</a>
+        </p>
+        <p>2015-04-26 23:49</p>
+    </div>
+</div>
+</body>
+</html>

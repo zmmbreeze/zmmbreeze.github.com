@@ -1,0 +1,447 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>让你的站点支持触屏</title>
+    <link rel="stylesheet" href="./assets/blog.css" />
+    <link rel="stylesheet" href="./assets/entry.css" />
+    <link rel="stylesheet" href="./assets/highlight.css" />
+</head>
+<body>
+<div class="main">
+    <a class="back" href="./">MZhou's blog</a>
+    <div class="entry">
+        <h1 id="-">让你的站点支持触屏</h1>
+<p>从手机到桌面屏幕，越来越多的设备拥有了触摸屏。当用户使用你的界面时，你的app应该直观且优雅的支持触摸操作。</p>
+<h2 id="-">让页面元素响应触摸状态</h2>
+<p>从手机到桌面屏幕，越来越多的设备拥有了触摸屏。当用户使用你的界面时，你的app应该直观且优雅的支持触摸操作。</p>
+<h3 id="-">添加触摸状态的样式</h3>
+<p>你有没有触摸或点击一个页面上的元素，有没有奇怪为什么这个站点的页面元素可以检测这些状态？</p>
+<p>当用户触摸你的界面中的元素时，仅仅是简单地修改元素的颜色就可以让用户感知你的站点可以正常工作。不只是这个作用，还可以让用户感受到页面的即时响应。</p>
+<h4 id="-">使用伪类来切换不同触摸状态下的样式</h4>
+<p>最快地支持触摸的方式就是在页面元素的触摸状态切换时修改其样式。</p>
+<p>关键点：</p>
+<ul>
+<li>修改<code>:hover</code>、<code>:active</code>和<code>:focus</code>状态下的UI，让用户感觉你的站点是可以即时响应的。</li>
+<li>不要覆盖浏览器的默认touch和focus行为，除非你自己实现了对应的UI变化。</li>
+<li>对于用户可能进行触摸操作的页面元素，禁用其文字选择功能。除非用户有需要会拷贝或选择文字。</li>
+</ul>
+<p>DOM元素可以处于以下四种状态：默认、focus、hover和active。如果你想要改变这些状态下的UI，我们需要使用这三种伪类：<code>:hover</code>、<code>:focus</code>和<code>:active</code>。例如：</p>
+<pre><code><span class="hljs-class">.btn</span> {
+  <span class="hljs-attribute">background-color</span>: <span class="hljs-hexcolor">#4285f4</span>;
+}
+
+<span class="hljs-class">.btn</span><span class="hljs-pseudo">:hover</span> {
+  <span class="hljs-attribute">background-color</span>: <span class="hljs-hexcolor">#296CDB</span>;
+}
+
+<span class="hljs-class">.btn</span><span class="hljs-pseudo">:focus</span> {
+  <span class="hljs-attribute">background-color</span>: <span class="hljs-hexcolor">#0F52C1</span>;
+
+  <span class="hljs-comment">/* The outline parameter surpresses the border
+  color / outline when focused */</span>
+  <span class="hljs-attribute">outline</span>: <span class="hljs-number">0</span>;
+}
+
+<span class="hljs-class">.btn</span><span class="hljs-pseudo">:active</span> {
+  <span class="hljs-attribute">background-color</span>: <span class="hljs-hexcolor">#0039A8</span>;
+}
+</code></pre><p><a href="">查看样例</a></p>
+<p>看下<a href="">伪类所对应的触摸状态</a></p>
+<p><img src="https://developers.google.com/web/fundamentals/documentation/user-input/touch-input/activestates/images/button-states.png" alt=""></p>
+<h3 id="-">覆盖浏览器默认的触摸状态样式</h3>
+<p>不同的浏览器实现了它们自己特有的触摸状态样式。当你想要实现自己的样式时，就需要同时覆盖掉浏览器的默认样式。</p>
+<p>记住：</p>
+<ul>
+<li>只有当你实现了自己的样式时，才需要覆盖浏览器的默认样式。</li>
+</ul>
+<h4 id="-tap-">覆盖Tap高亮样式</h4>
+<p>当移动设备刚出现的时候，很多站点都没有激活状态下的样式。结果很多浏览器在用户触摸浏览器的时候添加了高亮颜色或是其他样式。</p>
+<p>Safari和Chrome添加了一个高亮颜色作为Tap高亮样式。这可以通过设置CSS样式<code>-webkit-tap-highlight-color</code>来修改默认样式。</p>
+<pre><code><span class="hljs-comment">/* Webkit / Chrome Specific CSS to remove tap
+highlight color */</span>
+<span class="hljs-class">.btn</span> <span class="hljs-rules">{
+  <span class="hljs-rule"><span class="hljs-attribute">-webkit-tap-highlight-color</span>:<span class="hljs-value"> transparent</span></span>;
+}</span>
+</code></pre><p>Windows Phone上的Internet Explorer有一个类似的行为，但是它需要meta标签来重写：</p>
+<pre><code>&lt;meta <span class="hljs-variable">name=</span><span class="hljs-string">"msapplication-tap-highlight"</span> <span class="hljs-variable">content=</span><span class="hljs-string">"no"</span> /&gt;
+</code></pre><h4 id="-firefoxos-">重写FirefoxOS按钮的状态样式</h4>
+<p>Firefox的伪类<code>-moz-focus-inner</code>为每个可触摸元素默认添加了一个outline样式。你可以通过设置<code>border:0</code>来移除outline样式。</p>
+<p>如果你使用了<code>&lt;button&gt;</code>元素，FirefoxOS会其默认添加个渐变的背景。你可以通过设置<code>background-image:none</code>来覆盖这样式。</p>
+<pre><code><span class="hljs-comment">/* Firefox Specific CSS to remove button
+differences and focus ring */</span>
+<span class="hljs-class">.btn</span> {
+  <span class="hljs-attribute">background-image</span>: none;
+}
+
+<span class="hljs-class">.btn</span><span class="hljs-pseudo">::-moz-focus-inner</span> {
+  <span class="hljs-attribute">border</span>: <span class="hljs-number">0</span>;
+}
+</code></pre><h4 id="-focus-ouline-">重写Focus状态下的ouline样式</h4>
+<p>使用<code>outline:0</code>可以覆盖focused元素的outline颜色。</p>
+<pre><code><span class="hljs-class">.btn</span><span class="hljs-pseudo">:focus</span> {
+  <span class="hljs-attribute">outline</span>: <span class="hljs-number">0</span>;
+
+  <span class="hljs-comment">// Add replacement focus styling here</span>
+}
+</code></pre><h5 id="-ui-user-select-">禁用可触摸UI的user-select功能</h5>
+<p>在一些移动浏览器上，用户长按屏幕就可以选择文字。但当用户不小心按一个按钮时间太长，并不会触发点击事件而会触发按钮文字的选择，这并不是好的用户体验。</p>
+<pre><code><span class="hljs-rule"><span class="hljs-attribute">-moz-user-select</span>:<span class="hljs-value"> none</span></span>;
+<span class="hljs-rule"><span class="hljs-attribute">-webkit-user-select</span>:<span class="hljs-value"> none</span></span>;
+<span class="hljs-rule"><span class="hljs-attribute">-ms-user-select</span>:<span class="hljs-value"> none</span></span>;
+<span class="hljs-rule"><span class="hljs-attribute">user-select</span>:<span class="hljs-value"> none</span></span>;
+</code></pre><p>记住：</p>
+<ul>
+<li>如果页面元素中的信息对用户有用，例如电话号码、email地址等等的东西，你不应该轻易地禁用<code>user-select</code>。</li>
+</ul>
+<h3 id="-">引用</h3>
+<p>触摸状态的伪类。</p>
+<ul>
+<li>伪类：<code>:focus</code></li>
+<li>例子：<img src="https://developers.google.com/web/fundamentals/documentation/user-input/touch-input/activestates/images/btn-focus-state.png" alt=""></li>
+<li><p>描述：当你通过tab键切换焦点时，Focus状态可以提示用户哪个元素处于激活状态</p>
+</li>
+<li><p>伪类：<code>:active</code></p>
+</li>
+<li>例子：<img src="https://developers.google.com/web/fundamentals/documentation/user-input/touch-input/activestates/images/btn-pressed-state.png" alt=""></li>
+<li><p>描述：这个状态表示页面元素被选中，例如用户正在点击或触摸一个元素</p>
+</li>
+<li><p>伪类：<code>:hover</code></p>
+</li>
+<li>例子：<img src="https://developers.google.com/web/fundamentals/documentation/user-input/touch-input/activestates/images/btn-hover-state.png" alt=""></li>
+<li>描述：当用户的鼠标处于页面元素之上时，这个元素就会进入这个状态。在hover是改变UI可以鼓励用户与此元素交互</li>
+</ul>
+<h2 id="-">实现自定义手势</h2>
+<p>如果你想要为自己的站点实现一个自定义的交互和手势，那么有两点要记住：要支持哪些移动浏览器和如何保持高帧率。在这篇文章中我们讲一探究竟。</p>
+<h3 id="-">使用事件来响应触摸操作</h3>
+<p>根据你想要实现的touch操作，你就需要在如下阵营中选其一：</p>
+<ul>
+<li>用户同时只与一个特别的元素交互</li>
+<li>用户与多个元素在同一时间交互</li>
+</ul>
+<p>两者必选其一。</p>
+<p>如果用户只需要和一个元素交互，那么只要手势操作开始，你可能就需要把所有的touch事件放在那个元素上。例如，在其他元素上滑动也可以控制要移动的元素。</p>
+<p><img src="https://developers.google.com/web/fundamentals/documentation/user-input/touch-input/touchevents/images/touch-document-level.gif" alt=""></p>
+<p>然后，如果你期望用户与多个元素在同一时间交互，你应该将touch操作限制到特定的元素上。
+<img src="https://developers.google.com/web/fundamentals/documentation/user-input/touch-input/touchevents/images/touch-element-level.gif" alt=""></p>
+<p>TL;DR</p>
+<ul>
+<li>要支持所有的设备，那就需要处理touch、mouse和MS Pointer事件</li>
+<li>永远将开始整个交互的事件监听器绑定在元素本身上</li>
+<li>如果你想让用户与一个指定的元素交互，那么将移动和结束的监听器绑定在document上面；确保在结束的监听器中解绑移动和结束的监听器</li>
+<li>如果你想要支持多点触摸，要么在各个元素上绑定与其对应的移动和结束touch事件，要么在一个元素上处理所有的touch事件</li>
+</ul>
+<h4 id="-">添加事件监听器</h4>
+<p>大多数移动浏览器都实现了Touch事件和鼠标事件。</p>
+<p>你需要绑定的事件名是：<code>touchstart</code>、<code>touchmove</code>、<code>touchend</code>和<code>touchcancel</code>。</p>
+<p>在某些情况下，你可能也需要支持鼠标的交互；那么你可以使用这些事件：<code>mousedown</code>、<code>mousemove</code>和<code>mouseup</code>。</p>
+<p>对与Windows Phone的设备，你需要支持一系列Pointer Events。Pointer Events是鼠标和touch事件的合集。目前这只在IE 10+上支持，事件名分别是<code>MSPointerDown</code>、<code>MSPointerMove</code>和<code>MSPointerUp</code>。</p>
+<p>Touch、鼠标和Pointer Events是在你的应用中增加手势操作的重要基础。（查看下<a href="https://developers.google.com/web/fundamentals/documentation/user-input/touch-input/touchevents/index#touch-mouse-and-ms-pointer-events">Touch、鼠标和Pointer Events</a>）</p>
+<p>使用<code>addEventListener()</code>方法可以注册这些事件，同时还要传递回调函数和一个布尔值。这个布尔值决定了是否使用捕获模式。为<code>true</code>时表示使用捕获模式时，你可以在其他元素之前捕获或打断事件。</p>
+<pre><code><span class="hljs-comment">// Check if pointer events are supported.</span>
+<span class="hljs-keyword">if</span> (<span class="hljs-built_in">window</span>.navigator.msPointerEnabled) {
+  <span class="hljs-comment">// Add Pointer Event Listener</span>
+  swipeFrontElement.addEventListener(<span class="hljs-string">'MSPointerDown'</span>, <span class="hljs-keyword">this</span>.handleGestureStart, <span class="hljs-keyword">true</span>);
+} <span class="hljs-keyword">else</span> {
+  <span class="hljs-comment">// Add Touch Listener</span>
+  swipeFrontElement.addEventListener(<span class="hljs-string">'touchstart'</span>, <span class="hljs-keyword">this</span>.handleGestureStart, <span class="hljs-keyword">true</span>);
+
+  <span class="hljs-comment">// Add Mouse Listener</span>
+  swipeFrontElement.addEventListener(<span class="hljs-string">'mousedown'</span>, <span class="hljs-keyword">this</span>.handleGestureStart, <span class="hljs-keyword">true</span>);
+}
+</code></pre><p>这段代码一开始先检查<code>window.navigator.msPointerEnabled</code>来判断是否支持Pointer Events。如果不支持就在添加touch和鼠标事件的监控。</p>
+<h4 id="-">处理单个元素的交互</h4>
+<p>你可能已经注意到，在上面的代码片段中只是添加了开始手势的事件。这是故意这么写的。</p>
+<p>一旦手势操作在元素上开始，就添加移动和结束的事件监听器。这样浏览器可以通过touch事件监听器来检查touch操作是否发生了。并且处理地更快，因为在平时（手势操作开始前）不需要运行额外的javascript。</p>
+<p><img src="https://developers.google.com/web/fundamentals/documentation/user-input/touch-input/touchevents/images/scroll-bottleneck.gif" alt=""></p>
+<p>实现的步骤如下：</p>
+<ol>
+<li>添加开始事件监听器到指定元素上；</li>
+<li>在开始事件的监听器中，绑定移动和结束事件的监听器到document上。之所以要绑定在document上，是因为我们需要监控所有的事件，不仅仅是那个指定的元素；（译者注：用户的手势操作有时很快，可能会超出指定的元素）</li>
+<li>处理移动事件；</li>
+<li>在结束事件的监听器中，移除移动和结束事件的监听器；</li>
+</ol>
+<p>如下是<code>handleGestureStart</code>方法的代码片段，它添加了移动和结束的事件监听器到document上：</p>
+<pre><code><span class="hljs-comment">// Handle the start of gestures</span>
+<span class="hljs-keyword">this</span>.handleGestureStart = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(evt)</span> </span>{
+  evt.preventDefault();
+
+  <span class="hljs-keyword">if</span>(evt.touches &amp;&amp; evt.touches.length &gt; <span class="hljs-number">1</span>) {
+    <span class="hljs-keyword">return</span>;
+  }
+
+  <span class="hljs-comment">// Add the move and end listeners</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-built_in">window</span>.navigator.msPointerEnabled) {
+    <span class="hljs-comment">// Pointer events are supported.</span>
+    <span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">'MSPointerMove'</span>, <span class="hljs-keyword">this</span>.handleGestureMove, <span class="hljs-literal">true</span>);
+    <span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">'MSPointerUp'</span>, <span class="hljs-keyword">this</span>.handleGestureEnd, <span class="hljs-literal">true</span>);
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-comment">// Add Touch Listeners</span>
+    <span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">'touchmove'</span>, <span class="hljs-keyword">this</span>.handleGestureMove, <span class="hljs-literal">true</span>);
+    <span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">'touchend'</span>, <span class="hljs-keyword">this</span>.handleGestureEnd, <span class="hljs-literal">true</span>);
+    <span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">'touchcancel'</span>, <span class="hljs-keyword">this</span>.handleGestureEnd, <span class="hljs-literal">true</span>);
+
+    <span class="hljs-comment">// Add Mouse Listeners</span>
+    <span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">'mousemove'</span>, <span class="hljs-keyword">this</span>.handleGestureMove, <span class="hljs-literal">true</span>);
+    <span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">'mouseup'</span>, <span class="hljs-keyword">this</span>.handleGestureEnd, <span class="hljs-literal">true</span>);
+  }
+
+  initialTouchPos = getGesturePointFromEvent(evt);
+
+  swipeFrontElement.style.transition = <span class="hljs-string">'initial'</span>;
+}.bind(<span class="hljs-keyword">this</span>);
+</code></pre><p>我们使用的结束事件的回调函数是<code>handleGestureEnd</code>。在手势操作结束后它移除了移动和结束事件的监听器。</p>
+<pre><code><span class="hljs-comment">// Handle end gestures</span>
+<span class="hljs-keyword">this</span>.handleGestureEnd = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(evt)</span> </span>{
+  evt.preventDefault();
+
+  <span class="hljs-keyword">if</span>(evt.touches &amp;&amp; evt.touches.length &gt; <span class="hljs-number">0</span>) {
+    <span class="hljs-keyword">return</span>;
+  }
+
+  isAnimating = <span class="hljs-literal">false</span>;
+
+  <span class="hljs-comment">// Remove Event Listeners</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-built_in">window</span>.navigator.msPointerEnabled) {
+    <span class="hljs-comment">// Remove Pointer Event Listeners</span>
+    <span class="hljs-built_in">document</span>.removeEventListener(<span class="hljs-string">'MSPointerMove'</span>, <span class="hljs-keyword">this</span>.handleGestureMove, <span class="hljs-literal">true</span>);
+    <span class="hljs-built_in">document</span>.removeEventListener(<span class="hljs-string">'MSPointerUp'</span>, <span class="hljs-keyword">this</span>.handleGestureEnd, <span class="hljs-literal">true</span>);
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-comment">// Remove Touch Listeners</span>
+    <span class="hljs-built_in">document</span>.removeEventListener(<span class="hljs-string">'touchmove'</span>, <span class="hljs-keyword">this</span>.handleGestureMove, <span class="hljs-literal">true</span>);
+    <span class="hljs-built_in">document</span>.removeEventListener(<span class="hljs-string">'touchend'</span>, <span class="hljs-keyword">this</span>.handleGestureEnd, <span class="hljs-literal">true</span>);
+    <span class="hljs-built_in">document</span>.removeEventListener(<span class="hljs-string">'touchcancel'</span>, <span class="hljs-keyword">this</span>.handleGestureEnd, <span class="hljs-literal">true</span>);
+
+    <span class="hljs-comment">// Remove Mouse Listeners</span>
+    <span class="hljs-built_in">document</span>.removeEventListener(<span class="hljs-string">'mousemove'</span>, <span class="hljs-keyword">this</span>.handleGestureMove, <span class="hljs-literal">true</span>);
+    <span class="hljs-built_in">document</span>.removeEventListener(<span class="hljs-string">'mouseup'</span>, <span class="hljs-keyword">this</span>.handleGestureEnd, <span class="hljs-literal">true</span>);
+  }
+
+  updateSwipeRestPosition();
+}.bind(<span class="hljs-keyword">this</span>);
+</code></pre><p>鼠标事件也使用相同的处理方法，因为用户的鼠标很可能会不小心移动到指定元素的外面。如果只是将移动事件绑定在元素上，那么很容易会不触发事件。相反地如果绑定在document上面，移动事件将继续触发不论鼠标在页面的哪个地方。</p>
+<p>你可以使用Chrome DevTool中的“Show potential scroll bottlenecks”功能来了解touch事件的实现：</p>
+<p><img src="https://developers.google.com/web/fundamentals/documentation/user-input/touch-input/touchevents/images/scroll-bottleneck-devtool.png" alt=""></p>
+<h4 id="-">处理多元素的交互</h4>
+<p>如果你期望用户在同一时间与多个页面元素交互，你可以将对应的移动和结束事件直接绑定到那些元素上。但是这只适用于touch事件。对于鼠标事件，你依旧需要将<code>mousemove</code>和<code>mouseup</code>事件绑定到document上面。</p>
+<p>如果我们只想要监控特定元素上的touch操作，那么我们可以把touch和pinter事件的移动和结束监听器直接绑定在元素上：</p>
+<pre><code><span class="hljs-comment">// Check if pointer events are supported.</span>
+<span class="hljs-keyword">if</span> (<span class="hljs-built_in">window</span>.navigator.msPointerEnabled) {
+  <span class="hljs-comment">// Add Pointer Event Listener</span>
+  elementHold.addEventListener(<span class="hljs-string">'MSPointerDown'</span>, <span class="hljs-keyword">this</span>.handleGestureStart, <span class="hljs-keyword">true</span>);
+  elementHold.addEventListener(<span class="hljs-string">'MSPointerMove'</span>, <span class="hljs-keyword">this</span>.handleGestureMove, <span class="hljs-keyword">true</span>);
+  elementHold.addEventListener(<span class="hljs-string">'MSPointerUp'</span>, <span class="hljs-keyword">this</span>.handleGestureEnd, <span class="hljs-keyword">true</span>);
+} <span class="hljs-keyword">else</span> {
+  <span class="hljs-comment">// Add Touch Listeners</span>
+  elementHold.addEventListener(<span class="hljs-string">'touchstart'</span>, <span class="hljs-keyword">this</span>.handleGestureStart, <span class="hljs-keyword">true</span>);
+  elementHold.addEventListener(<span class="hljs-string">'touchmove'</span>, <span class="hljs-keyword">this</span>.handleGestureMove, <span class="hljs-keyword">true</span>);
+  elementHold.addEventListener(<span class="hljs-string">'touchend'</span>, <span class="hljs-keyword">this</span>.handleGestureEnd, <span class="hljs-keyword">true</span>);
+  elementHold.addEventListener(<span class="hljs-string">'touchcancel'</span>, <span class="hljs-keyword">this</span>.handleGestureEnd, <span class="hljs-keyword">true</span>);
+
+  <span class="hljs-comment">// Add Mouse Listeners</span>
+  elementHold.addEventListener(<span class="hljs-string">'mousedown'</span>, <span class="hljs-keyword">this</span>.handleGestureStart, <span class="hljs-keyword">true</span>);
+}
+</code></pre><p>在<code>handleGestureStart</code>和<code>handleGestureEnd</code>函数中，添加和移除鼠标事件的监听器到document上。</p>
+<pre><code><span class="hljs-comment">// Handle the start of gestures</span>
+<span class="hljs-keyword">this</span>.handleGestureStart = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(evt)</span> </span>{
+  evt.preventDefault();
+
+          <span class="hljs-keyword">var</span> point = getGesturePointFromEvent(evt);
+  initialYPos = point.y;
+
+  <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">window</span>.navigator.msPointerEnabled) {
+    <span class="hljs-comment">// Add Mouse Listeners</span>
+    <span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">'mousemove'</span>, <span class="hljs-keyword">this</span>.handleGestureMove, <span class="hljs-literal">true</span>);
+    <span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">'mouseup'</span>, <span class="hljs-keyword">this</span>.handleGestureEnd, <span class="hljs-literal">true</span>);
+  }
+}.bind(<span class="hljs-keyword">this</span>);
+
+<span class="hljs-keyword">this</span>.handleGestureEnd = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(evt)</span> </span>{
+  evt.preventDefault();
+
+  <span class="hljs-keyword">if</span>(evt.targetTouches &amp;&amp; evt.targetTouches.length &gt; <span class="hljs-number">0</span>) {
+    <span class="hljs-keyword">return</span>;
+  }
+
+  <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">window</span>.navigator.msPointerEnabled) {
+    <span class="hljs-comment">// Remove Mouse Listeners</span>
+    <span class="hljs-built_in">document</span>.removeEventListener(<span class="hljs-string">'mousemove'</span>, <span class="hljs-keyword">this</span>.handleGestureMove, <span class="hljs-literal">true</span>);
+    <span class="hljs-built_in">document</span>.removeEventListener(<span class="hljs-string">'mouseup'</span>, <span class="hljs-keyword">this</span>.handleGestureEnd, <span class="hljs-literal">true</span>);
+  }
+
+  isAnimating = <span class="hljs-literal">false</span>;
+  lastHolderPos = lastHolderPos + -(initialYPos - lastYPos);
+}.bind(<span class="hljs-keyword">this</span>);
+</code></pre><h3 id="touch-60fps">Touch操作时保持60fps</h3>
+<p>现在我们已经处理好开始和结束事件，我们就可以真正地实现touch事件了。</p>
+<h4 id="-touch-">获取和存储Touch事件的坐标</h4>
+<p>对于任何开始和移动事件，你可以轻松地提取出<code>x</code>和<code>y</code>坐标。</p>
+<p>如下代码片段中通过<code>targetTouches</code>来判断是否是一个touch事件对象。如果事件对象是鼠标或者pointer事件，那么直接获取事件对象的<code>clientX</code>和<code>clientY</code>值。</p>
+<pre><code>function getGesturePointFromEvent(evt) {
+    var <span class="hljs-built_in">point</span> = {};
+
+    <span class="hljs-keyword">if</span>(evt.targetTouches) {
+      <span class="hljs-comment">// Prefer Touch Events</span>
+      <span class="hljs-built_in">point</span>.x = evt.targetTouches[<span class="hljs-number">0</span>].clientX;
+      <span class="hljs-built_in">point</span>.y = evt.targetTouches[<span class="hljs-number">0</span>].clientY;
+    } <span class="hljs-keyword">else</span> {
+      <span class="hljs-comment">// Either Mouse event or Pointer Event</span>
+      <span class="hljs-built_in">point</span>.x = evt.clientX;
+      <span class="hljs-built_in">point</span>.y = evt.clientY;
+    }
+
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">point</span>;
+  }
+</code></pre><p>每个touch事件都有三种TouchList属性（见<a href="https://developers.google.com/web/fundamentals/documentation/user-input/touch-input/touchevents/index#touch-lists">touch列表属性</a>）：</p>
+<ul>
+<li><code>touches</code>：包含了所有当前屏幕上Touch对象，无论它们起始于哪个元素上</li>
+<li><code>targetTouches</code>：包含了所有起始于当前事件所绑定的元素的touch对象</li>
+<li><code>changedTouches</code>：包含了所有因为事件触发而状态发生改变的Touch对象（译者注：例如touchmove事件中，触摸点移动touch对象为changedTouches，不动则不是）</li>
+</ul>
+<p>大多数情况下<code>targetTouches</code>属性就足够了。</p>
+<h4 id="request-animation-frame">Request Animation Frame</h4>
+<p>因为事件回调函数在主线程中触发，我们就需要让回调的运行时间尽量短，以保持高帧率，并且避免卡顿。</p>
+<p>在事件回调中使用<code>requestAnimationFrame</code>来修改UI。它可以让你可以在浏览器绘制一帧时更新UI，也可以帮你把一些操作放在回调函数外面。</p>
+<p>一个典型的实现在开始和移动事件中把<code>x</code>和<code>y</code>坐标保存下来。然后在移动事件的回调函数中调用<code>requestAnimationFrame</code>。</p>
+<p>在我们的DEMO中，我们在<code>handleGestureStart</code>中存储touch的初始化位置：</p>
+<pre><code><span class="hljs-comment">// Handle the start of gestures</span>
+<span class="hljs-keyword">this</span>.handleGestureStart = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(evt)</span> </span>{
+  evt.preventDefault();
+
+  <span class="hljs-keyword">if</span>(evt.touches &amp;&amp; evt.touches.length &gt; <span class="hljs-number">1</span>) {
+    <span class="hljs-keyword">return</span>;
+  }
+
+  <span class="hljs-comment">// Add the move and end listeners</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-built_in">window</span>.navigator.msPointerEnabled) {
+    <span class="hljs-comment">// Pointer events are supported.</span>
+    <span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">'MSPointerMove'</span>, <span class="hljs-keyword">this</span>.handleGestureMove, <span class="hljs-literal">true</span>);
+    <span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">'MSPointerUp'</span>, <span class="hljs-keyword">this</span>.handleGestureEnd, <span class="hljs-literal">true</span>);
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-comment">// Add Touch Listeners</span>
+    <span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">'touchmove'</span>, <span class="hljs-keyword">this</span>.handleGestureMove, <span class="hljs-literal">true</span>);
+    <span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">'touchend'</span>, <span class="hljs-keyword">this</span>.handleGestureEnd, <span class="hljs-literal">true</span>);
+    <span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">'touchcancel'</span>, <span class="hljs-keyword">this</span>.handleGestureEnd, <span class="hljs-literal">true</span>);
+
+    <span class="hljs-comment">// Add Mouse Listeners</span>
+    <span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">'mousemove'</span>, <span class="hljs-keyword">this</span>.handleGestureMove, <span class="hljs-literal">true</span>);
+    <span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">'mouseup'</span>, <span class="hljs-keyword">this</span>.handleGestureEnd, <span class="hljs-literal">true</span>);
+  }
+
+  initialTouchPos = getGesturePointFromEvent(evt);
+
+  swipeFrontElement.style.transition = <span class="hljs-string">'initial'</span>;
+}.bind(<span class="hljs-keyword">this</span>);
+</code></pre><p>在<code>handleGestureMove</code>方法中，如果需要则会在<code>requestAnimationFrame</code>之前存储<code>y</code>位置，然后将<code>onAnimFrame</code>函数传递作为回调函数：</p>
+<pre><code><span class="hljs-reserved">var</span> point = getGesturePointFromEvent(evt);
+lastYPos = point.y;
+
+  <span class="hljs-keyword">if</span>(isAnimating) {
+    <span class="hljs-keyword">return</span>;
+  }
+
+  isAnimating = <span class="hljs-literal">true</span>;
+  <span class="hljs-built_in">window</span>.requestAnimFrame(onAnimFrame);
+</code></pre><p>在<code>onAnimFrame</code>函数中，我们修改UI来移动元素。一开始我们先检查手势是否还在进行，来决定是否继续执行动画。如果需要执行动画，你们我们先计算出新的transform值。</p>
+<p>一旦我们设置好transform，我们就将<code>isAnimating</code>变量设置为<code>false</code>，这样下一次touch事件中可以执行新的<code>requestAnimationFrame</code>。</p>
+<pre><code> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">onAnimFrame</span><span class="hljs-params">()</span> </span>{
+    <span class="hljs-keyword">if</span>(!isAnimating) {
+      <span class="hljs-keyword">return</span>;
+    }
+
+    <span class="hljs-keyword">var</span> newYTransform = lastHolderPos + -(initialYPos - lastYPos);
+
+    newYTransform = limitValueToSlider(newYTransform);
+
+    <span class="hljs-keyword">var</span> transformStyle = <span class="hljs-string">'translateY('</span>+newYTransform+<span class="hljs-string">'px)'</span>;
+    elementHold.style.msTransform = transformStyle;
+    elementHold.style.MozTransform = transformStyle;
+    elementHold.style.webkitTransform = transformStyle;
+    elementHold.style.transform = transformStyle;
+
+    isAnimating = <span class="hljs-literal">false</span>;
+}
+</code></pre><h4 id="-touch-action-">使用touch-action来控制滚动</h4>
+<p>CSS属性<code>touch-action</code>允许你在触摸时控制滚动行为。在我们的例子中，使用<code>touch-action: none</code>来禁用触摸滚屏功能。</p>
+<pre><code><span class="hljs-comment">/* Pass all touches to javascript */</span>
+<span class="hljs-rule"><span class="hljs-attribute">-ms-touch-action</span>:<span class="hljs-value"> none</span></span>;
+<span class="hljs-rule"><span class="hljs-attribute">touch-action</span>:<span class="hljs-value"> none</span></span>;
+</code></pre><p>如下是<code>touch-action</code>的所有可能值。</p>
+<ul>
+<li>属性名：<code>touch-action: auto</code><ul>
+<li>描述：滚动正常工作，只要浏览支持触摸操作依旧可以触发水平或是垂直的滚动。</li>
+</ul>
+</li>
+<li>属性名：<code>touch-action: none</code><ul>
+<li>描述：触摸操作不能触发滚动</li>
+</ul>
+</li>
+<li>属性名：<code>touch-action: pan-x</code><ul>
+<li>描述：触摸操作可以触发水平滚动；但垂直滚动被禁止；</li>
+</ul>
+</li>
+<li>属性名：<code>touch-action: pan-y</code><ul>
+<li>描述：触摸操作可以触发垂直滚动；但水平滚动被禁止；</li>
+</ul>
+</li>
+</ul>
+<p>记住：</p>
+<ol>
+<li>使用<code>touch-action: pan-x</code>或<code>touch-action: pan-y</code>更好，因为你的目的明确，用户只能在元素上水平或垂直的滚动。</li>
+</ol>
+<h3 id="-">引用</h3>
+<p>touch事件的标准定义可以通过<a href="http://www.w3.org/TR/touch-events/">w3 Touch Event</a>来获取。</p>
+<h4 id="touch-ms-pointer-">Touch事件、鼠标事件和MS Pointer事件</h4>
+<p>这些事件是在你的应用中增加手势操作的重要基础。</p>
+<ul>
+<li>事件名：<code>touchstart</code>、<code>mousedown</code>、<code>MSPointerDown</code><ul>
+<li>描述：当手指第一次触摸一个元素或者鼠标按下时触发。</li>
+</ul>
+</li>
+<li>事件名：<code>touchmove</code>、<code>mousemove</code>、<code>MSPointerMove</code><ul>
+<li>描述：当手指在屏幕上移动或者用鼠标拖动时触发。</li>
+</ul>
+</li>
+<li>事件名：<code>touchend</code>、<code>mouseup</code>、<code>MSPointerUp</code><ul>
+<li>描述：当手指离开屏幕或者鼠标松开时触发。</li>
+</ul>
+</li>
+<li>事件名：<code>touchcancel</code><ul>
+<li>描述：当浏览器取消手势操作是触发此事件。</li>
+</ul>
+</li>
+</ul>
+<h4 id="touch-list-">Touch list对象</h4>
+<p>每个touch事件对象都包含三种touch list属性：</p>
+<ul>
+<li>属性：<code>touches</code><ul>
+<li>描述：包含了所有当前屏幕上Touch对象，无论它们起始于哪个元素上</li>
+</ul>
+</li>
+<li>属性：<code>targetTouches</code><ul>
+<li>描述：包含了所有起始于当前事件所绑定的元素的touch对象。例如，如果你的事件绑定在一个<code>&lt;button&gt;</code>上，那么这个属性就只包含起始于这个按钮的touch对象。如果你的事件绑定在document上，那么这个属性就包含这个document上的所有touch对象。</li>
+</ul>
+</li>
+<li>属性：<code>changedTouches</code><ul>
+<li>描述：包含了所有因为事件触发而状态发生改变的Touch对象<ol>
+<li>对于<a href="http://www.w3.org/TR/touch-events/#dfn-touchstart">touchstart</a>事件，这个属性包含了在当前事件中刚刚激活的touch对象</li>
+<li>对于<a href="http://www.w3.org/TR/touch-events/#dfn-touchmove">touchmove</a>事件，这个属性包含了自从上一次move事件触发后位置移动的touch对象</li>
+<li>对于<a href="http://www.w3.org/TR/touch-events/#dfn-touchend">touchend</a>和<a href="http://www.w3.org/TR/touch-events/#dfn-touchcancel">touchcancel</a>，这个属性包含了刚刚离开屏幕的touch对象。</li>
+</ol>
+</li>
+</ul>
+</li>
+</ul>
+
+    </div>
+
+    <div class="info">
+        <h1>MZhou&#39;s blog - Taste of life.</h1>
+        <p>
+            <a href="https://github.com/zmmbreeze" target="_blank">zmmbreeze</a> / <a href="https://twitter.com/zhoumm">@zhoumm</a>
+        </p>
+        <p>2015-04-26 20:31</p>
+    </div>
+</div>
+</body>
+</html>

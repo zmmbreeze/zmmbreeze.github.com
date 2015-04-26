@@ -1,0 +1,111 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>CSS Counters</title>
+    <link rel="stylesheet" href="./assets/blog.css" />
+    <link rel="stylesheet" href="./assets/entry.css" />
+    <link rel="stylesheet" href="./assets/highlight.css" />
+</head>
+<body>
+<div class="main">
+    <a class="back" href="./">MZhou's blog</a>
+    <div class="entry">
+        <h1 id="css-counters">CSS Counters</h1>
+<p>CSS Counters是一个很有意思的特性，它配合 content 属性和伪元素可以实现自动编号的效果。它是<a href="http://www.w3.org/TR/CSS21/generate.html#counters" target="_blank">CSS2.1</a>提出的标准，主流浏览器对它的支持很好，即使是<a href="http://quirksmode.org/css/css2/" target="_blank">IE8都支持</a>。利用CSS Counters可以实现“标题自动编号”、“复杂样式的有序列表”等等以前需要后端配合才能实现的样式。例如下面是由<a href="http://www.red-team-design.com/css3-ordered-list-styles" target="_blank">RED TEAM DESIGN</a>提供的特殊有序列表样式：</p>
+<p><img src="./imgs/7/1.png" /></p>
+<p><h2>counter-reset与counter-increment的使用</h2>
+在CSS2.1中<code>counter-reset</code>和<code>counter-increment</code>两个属性负责控制Counters，然后通过<code>content</code>属性的<code>counter()</code>函数来显示。每个Counters都有一个名字，<code>counter-reset</code>就是用于重置Counters。它的值是一个或以上的Counter名字和对应的可选初始值。例如：</p>
+<pre><code><span class="hljs-class">.ol1</span> <span class="hljs-rules">{
+    <span class="hljs-rule"><span class="hljs-attribute">counter-reset</span>:<span class="hljs-value"> ol <span class="hljs-number">2</span></span></span>;
+}</span>
+<span class="hljs-class">.ol2</span> <span class="hljs-rules">{
+    <span class="hljs-rule"><span class="hljs-attribute">counter-reset</span>:<span class="hljs-value"> ol1 ol2 <span class="hljs-number">3</span></span></span>;
+}</span>
+<span class="hljs-class">.ol2</span> <span class="hljs-rules">{
+    <span class="hljs-rule"><span class="hljs-attribute">counter-reset</span>:<span class="hljs-value"> ol1 ol1 <span class="hljs-number">3</span></span></span>;
+}</span>
+</code></pre><p>上例中第一种情况重置Counter ol初始值2，第二种情况重置Counter ol1的初始值为0、ol2的初始值为3，第三种情况重置了ol1的初始值为3。可见对于重复重置，CSS会默认覆盖前者的初始化值。<code>counter-increment</code>则用于控制Counters的增长，它的值是一个或以上的Counter名字和对应的可选增量值。例如：</p>
+<pre><code><span class="hljs-class">.li1</span> <span class="hljs-rules">{
+    <span class="hljs-rule"><span class="hljs-attribute">counter-increment</span>:<span class="hljs-value"> ol <span class="hljs-number">2</span></span></span>;
+}</span>
+<span class="hljs-class">.li2</span> <span class="hljs-rules">{
+    <span class="hljs-rule"><span class="hljs-attribute">counter-increment</span>:<span class="hljs-value"> ol ol <span class="hljs-number">1</span></span></span>;
+}</span>
+</code></pre><p>上例中第一种情况设置了Counter ol增长了2，第二种情况Counter ol增长了2，可见对于重复的设置增长值，CSS会作为是增量处理。然后在CSS的content属性中调用counter()函数即可显示出当前计数器值，如下：</p>
+<pre><code><span class="hljs-rule"><span class="hljs-attribute">li</span>:<span class="hljs-value">before {
+  content: <span class="hljs-function">counter</span>(ol) <span class="hljs-string">"."</span></span></span>;
+  <span class="hljs-rule"><span class="hljs-attribute">counter-increment</span>:<span class="hljs-value"> ol</span></span>;
+}
+</code></pre><p>counter()函数默认显示成数字的样式，它还可以设置第二个参数来修改输出。所有<a href="http://www.w3.org/TR/CSS21/generate.html#propdef-list-style-type">list-style-type</a>支持的样式它都支持，例如：&#39;disc&#39;、&#39;circle&#39;、&#39;square&#39;、和&#39;none&#39;等等，例子如下：</p>
+<pre><code><span class="hljs-rule"><span class="hljs-attribute">li</span>:<span class="hljs-value">before {
+  content: <span class="hljs-function">counter</span>(ol, disc) <span class="hljs-string">"."</span></span></span>;
+  <span class="hljs-rule"><span class="hljs-attribute">counter-increment</span>:<span class="hljs-value"> ol</span></span>;
+}
+</code></pre><p>总结一下，有几个注意点要留心：</p>
+<ol>
+<li>如果一个元素即使用了reset/increment又使用了content函数，那么先reset/increment再显示；</li>
+<li>如果一个元素同时使用了reset和increment，那么先reset</li>
+<li>如果一个counter被reset或increment多次，则按照顺序做覆盖或增量处理；</li>
+</ol>
+<p>看到目前为止，你已经可以使用Counters来作出自己的效果了。但是这篇博文想要谈的不仅仅如此，很显然如果仅仅凭借目前这些规范还没办法实现一个嵌套的有序列表。要模仿如下例一样的ol列表嵌套，目前的功能还不够。</p>
+<pre><code><span class="hljs-variable">&lt;ol&gt;</span>
+    <span class="hljs-variable">&lt;li&gt;</span>here’s one line <span class="hljs-keyword">from</span> a numbered list<span class="hljs-variable">&lt;/li&gt;</span>
+    <span class="hljs-variable">&lt;li&gt;</span>here’s another
+<span class="hljs-variable">&lt;ol&gt;</span>
+    <span class="hljs-variable">&lt;li&gt;</span>Here's one inner ol <span class="hljs-keyword">tag</span><span class="hljs-variable">&lt;/li&gt;</span>
+    <span class="hljs-variable">&lt;li&gt;</span>another line<span class="hljs-variable">&lt;/li&gt;</span>
+    <span class="hljs-variable">&lt;li&gt;</span>Last line.<span class="hljs-variable">&lt;/li&gt;</span>
+<span class="hljs-variable">&lt;/ol&gt;</span>
+<span class="hljs-variable">&lt;/li&gt;</span>
+    <span class="hljs-variable">&lt;li&gt;</span>第三列<span class="hljs-variable">&lt;/li&gt;</span>
+<span class="hljs-variable">&lt;/ol&gt;</span>
+</code></pre><p><h2>嵌套Counters与作用域</h2>
+为了模拟上面的效果，CSS增加了嵌套Counters与作用域的支持。如果一个元素有<code>counter-reset</code>的样式，则它会生成一个Counters实例，这个实例的作用域包含了它的子孙元素、它的伪元素和它的兄弟元素。举个例子：</p>
+<p><a class="jsbin-embed" href="http://jsbin.com/elaqox/2/embed?live">作用域例子</a><script type="text/javascript" src="http://static.jsbin.com/js/embed.js"></script></p>
+<p>从上面的例子可以发现，“父元素”和“其他元素”都处于作用域之外，故它们都是以1（默认值0，且增加1）开始。而兄弟元素、伪元素和子元素都按照顺序计数（after伪元素在子元素之后，before伪元素在子元素之前）。另外如果之前没有Counter实例（即没有<code>counter-reset</code>样式），那么<code>counter-increment</code>也会创建一个实例。</p>
+<p>除了作用域之外，还有个很重要的概念“嵌套”。所谓嵌套Counters是指“自我嵌套”。如果在一个Counter实例的作用域内再次重置相同名字的Counter实例，那么新的同名Counter会嵌套在其父Counter下。看下面的例子会比较清晰：</p>
+<pre><code><span class="hljs-tag">&lt;<span class="hljs-title">style</span>&gt;</span><span class="css">
+  <span class="hljs-tag">ol</span> <span class="hljs-rules">{
+    <span class="hljs-rule"><span class="hljs-attribute">counter-reset</span>:<span class="hljs-value"> ol</span></span>;
+  }</span>
+  <span class="hljs-tag">li</span> <span class="hljs-rules">{
+    <span class="hljs-rule"><span class="hljs-attribute">position</span>:<span class="hljs-value"> relative</span></span>;
+    <span class="hljs-rule"><span class="hljs-attribute">display</span>:<span class="hljs-value"> block</span></span>;
+    <span class="hljs-rule"><span class="hljs-attribute">padding-left</span>:<span class="hljs-value"> <span class="hljs-number">34px</span></span></span>;
+  }</span>
+  <span class="hljs-rule"><span class="hljs-attribute">li</span>:<span class="hljs-value">before {
+    content: <span class="hljs-function">counter</span>(ol) <span class="hljs-string">"."</span></span></span>;
+    <span class="hljs-rule"><span class="hljs-attribute">counter-increment</span>:<span class="hljs-value"> ol</span></span>;
+    <span class="hljs-rule"><span class="hljs-attribute">position</span>:<span class="hljs-value"> absolute</span></span>;
+    <span class="hljs-rule"><span class="hljs-attribute">top</span>:<span class="hljs-value"> <span class="hljs-number">0</span></span></span>;
+    <span class="hljs-rule"><span class="hljs-attribute">left</span>:<span class="hljs-value"> <span class="hljs-number">0</span></span></span>;
+  }
+</span><span class="hljs-tag">&lt;/<span class="hljs-title">style</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">ol</span>&gt;</span>                                             <span class="hljs-comment">&lt;!-- {item[0]=0 重置，作用域开始 --&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-title">li</span>&gt;</span>here’s one line from a numbered list<span class="hljs-tag">&lt;/<span class="hljs-title">li</span>&gt;</span><span class="hljs-comment">&lt;!--  item[0]++ (=1)    --&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-title">li</span>&gt;</span>here’s another                           <span class="hljs-comment">&lt;!--  item[0]++ (=2)    --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-title">ol</span>&gt;</span>                                     <span class="hljs-comment">&lt;!--    {item[1]=0 嵌套作用域开始 --&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-title">li</span>&gt;</span>Here's one inner ol tag<span class="hljs-tag">&lt;/<span class="hljs-title">li</span>&gt;</span>     <span class="hljs-comment">&lt;!--    item[1]++ (=1)  --&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-title">li</span>&gt;</span>another line<span class="hljs-tag">&lt;/<span class="hljs-title">li</span>&gt;</span>                <span class="hljs-comment">&lt;!--    item[1]++ (=2)  --&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-title">ol</span>&gt;</span>                                    <span class="hljs-comment">&lt;!--    } 嵌套作用域结束  --&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-title">li</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-title">li</span>&gt;</span>Last line.<span class="hljs-tag">&lt;/<span class="hljs-title">li</span>&gt;</span>                          <span class="hljs-comment">&lt;!--  item[0]++ (=3)    --&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-title">ol</span>&gt;</span>                                            <span class="hljs-comment">&lt;!-- } 作用域结束         --&gt;</span>
+</code></pre><p>嵌套Counters配合作用域，就可以模拟默认的嵌套ol列表效果了。这里面比较容易踩坑的点是<strong>伪元素的顺序问题</strong>。如果把上例里面的before换成after，则得到的效果会不一样。更奇特的事情是即使换成了after，在IE8下效果仍旧是正确的。个人猜测是因为IE8认为after也是和before伪元素一样，先于子元素来处理。目前还没在IE9下测试过，其他主流PC浏览器都符合标准。这里有个<a href="http://jsbin.com/izecop/4/">demo</a>展示了这种情况。</p>
+<blockquote>
+<p>2013-06-14补充：不仅仅<code>counter-reset</code>可以生成嵌套，未reset之前直接increment也会生成嵌套。这很容易导致出现意料之外地结果，所以确保increment之前一定要reset。</p>
+</blockquote>
+
+    </div>
+
+    <div class="info">
+        <h1>MZhou&#39;s blog - Taste of life.</h1>
+        <p>
+            <a href="https://github.com/zmmbreeze" target="_blank">zmmbreeze</a> / <a href="https://twitter.com/zhoumm">@zhoumm</a>
+        </p>
+        <p>2015-04-26 23:48</p>
+    </div>
+</div>
+</body>
+</html>

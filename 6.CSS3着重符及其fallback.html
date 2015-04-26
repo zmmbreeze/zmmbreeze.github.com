@@ -1,0 +1,110 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>CSS3着重符及其fallback</title>
+    <link rel="stylesheet" href="./assets/blog.css" />
+    <link rel="stylesheet" href="./assets/entry.css" />
+    <link rel="stylesheet" href="./assets/highlight.css" />
+</head>
+<body>
+<div class="main">
+    <a class="back" href="./">MZhou's blog</a>
+    <div class="entry">
+        <h1 id="css3-fallback">CSS3着重符及其fallback</h1>
+<p>在东亚国家，人们会在文章中重要文字旁加上小符号以突出其重要性。如下：</p>
+<p><img src="./imgs/6/1.png" alt=""></p>
+<h2 id="-">标准</h2>
+<p>在中文里面，我们一般会在文字下方加上圆形符号。在日语中会在文字上方加上小顿号。在CSS3中如下属性可以控制着重符号:</p>
+<ol>
+<li><a href="http://www.w3.org/TR/css-text-decor-3/#text-emphasis"><code>text-emphasis</code></a></li>
+<li><a href="http://www.w3.org/TR/css-text-decor-3/#text-emphasis-style"><code>text-emphasis-style</code></a></li>
+<li><a href="http://www.w3.org/TR/css-text-decor-3/#text-emphasis-color"><code>text-emphasis-color</code></a></li>
+<li><a href="http://www.w3.org/TR/css-text-decor-3/#text-emphasis-position"><code>text-emphasis-position</code></a></li>
+</ol>
+<p><code>text-emphasis</code>是<code>text-emphasis-style</code>和<code>text-emphasis-color</code>的快捷方式，注意它并不包含<code>text-emphasis-position</code>。</p>
+<p><code>text-emphasis-style</code>属性用于控制着重符号的样式。基本的符号形状有<code>dot | circle | double-circle | triangle | sesame</code>这几种，它们又分别有“空心（open）”、“填充（filled）”两种展现形式。当你只填了<code>filled</code>或<code>open</code>是，符号形状的默认值和文字是竖排还是横排（<code>writing-modes</code>）有关，比如横排时默认是<code>filled circle</code>，竖排时是<code>filled sesame</code>。如果你之前填了符号形状，则默认的展现形式是<code>filled</code>。当然你还可以自定义符号，但是只能显示一个字符。</p>
+<p>另一个重要的属性是<code>text-emphasis-color</code>，它控制了着重符号的颜色，默认使用当前文字的颜色。</p>
+<p>最后一个属性是<code>text-emphasis-position</code>，它有这几种可选值<code>[ over | under ] &amp;amp;&amp;amp; [ right | left ]</code>。它的默认值计算方式更为复杂些，与横竖排版和所处语言环境都有关系。横排情况下，中文环境默认值为<code>under</code>，日文环境默认值为<code>over</code>。竖排情况下，中文和日文环境下默认值都为<code>right</code>。</p>
+<p>在CSS中，一般着重符号的字体大小是其对应文字的一半。且当行高有足够空间来绘制着重符时，它不会影响到对应文字的行高。</p>
+<p>在2013年8月1日，这个标准成为“候选推荐标准”，这对喜爱文字排版的人来说是个好消息。遗憾地是目前只有webkit内核的浏览器是支持它的，并且需要使用<code>webkit</code>前缀。所以在使用时需要做fallback。</p>
+<h2 id="fallback">FALLBACK</h2>
+<p>在做fallback时，有这么几点是需要考虑的：</p>
+<ol>
+<li>如何应对letter-spacing样式和文字宽度不一致的情况</li>
+<li><span style="line-height: 13px;">如何处理浏览器的最小字体配置</span></li>
+<li>如何空间是否足够绘制着重符（计算行高）</li>
+<li>如何减少对现有html的影响</li>
+<li>如何获得所处语言环境</li>
+</ol>
+<h3 id="-">一</h3>
+<p>对于第一点的解决方案是：对每个字符用span包裹，方法类似于<a href="http://letteringjs.com/">letter.js</a>。然后在每个span内部插入另一个包含着重符的span，它的宽度为百分百，且绝对定位。如下面样例所示：</p>
+<iframe src="http://jsfiddle.net/zmmbreeze/C4KaB/embedded/result,html,css" height="300" width="100%" allowfullscreen="allowfullscreen" frameborder="0"></iframe>
+
+<p>对于有<code>letter-spacing</code>的情况，可以设置span的<code>letter-spacing</code>为0，然后使用<code>margin-right</code>来替代它。</p>
+<h3 id="-">二</h3>
+<p>如果你是用chrome，你可能已经注意到了“最小字体”导致的问题：着重符号太大了。在chrome下着重符号是12px，而不是8px（16/2）。为了解决问题2，我们需要想想其他方法。我首先考虑到的是zoom属性，它支持chrome（所有版本）、safari和IE。可惜的是在chrome下<code>zoom:0.5</code>也不能使字体变小。然后考虑到的是<code>transform:scale(0.5)</code>，幸运地是它能使文字比最小字体还要小。不过支持的浏览器不够多，参考<a href="http://caniuse.com/#search=transform">这里</a>。所以必须要考虑在不支持<code>transform</code>的时候使用fallback。我的处理方法是使用绝对大小（px）。虽然不能使着重符号字体变小，但是至少可以保证着重符位置正确。</p>
+<iframe src="http://jsfiddle.net/zmmbreeze/C4KaB/1/embedded/result,html,css" height="300" width="100%" allowfullscreen="allowfullscreen" frameborder="0"></iframe>
+
+<h3 id="-">三</h3>
+<p>在绘制着重符时，如果行高内有足够的高度，则着重符不会扩大行高。如果高度不够，则扩大行高。第二种情况需要设置<code>display:inline-block</code>; 及<code>padding-bottom</code>，来模拟行高高度的扩大。为了做高度是否充足的判断，我们就需要计算字体大小和行高。当你设置字体大小为1em时，对于IE这样的浏览器，获得地长度其实并不是以px为单位。这时需要一些hack：</p>
+<pre><code><span class="hljs-comment">// http://erik.eae.net/archives/2007/07/27/18.54.15/#comment-102291</span>
+<span class="hljs-keyword">var</span> PIXEL = /^\d+(px)?$/i;
+<span class="hljs-function">function <span class="hljs-title">getPixelValue</span><span class="hljs-params">(element, <span class="hljs-keyword">value</span>)</span> </span>{
+    <span class="hljs-keyword">if</span> (PIXEL.test(<span class="hljs-keyword">value</span>)) {
+        <span class="hljs-keyword">return</span> parseInt(<span class="hljs-keyword">value</span>);
+    }
+    <span class="hljs-keyword">var</span> style = element.style.left;
+    <span class="hljs-keyword">var</span> runtimeStyle = element.runtimeStyle.left;
+    element.runtimeStyle.left = element.currentStyle.left;
+    element.style.left = <span class="hljs-keyword">value</span> || <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">value</span> = element.style.pixelLeft;
+    element.style.left = style;
+    element.runtimeStyle.left = runtimeStyle;
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">value</span>;
+};
+</code></pre><p>幸运地是，jQuery已经处理了这种情况。这样我们就可以得到正确的字体大小和行高（需要特殊处理行高为缩放因子和normal的情况）。不过受到了“文字可能比设置地字体大小更大”、“同行有更高行高的元素（例如图片）”等等特殊情况的限制，导致了计算结果并不一定正确。幸运地是对最终结果的影响并不是很大。</p>
+<h3 id="-">四</h3>
+<p>第四个问题指的是<code>innerText/$(&#39;em&#39;).text()</code>的返回值在做了fallback之后就不再正确了，同时受到影响的还有<code>innerHTML</code>。对于后者我没有想到好的方案。对于前者，我们可以把着重符放在span标签的before伪元素上。这样得到的<code>innerText</code>值还是正确的。不过也引入了另一个问题：如何用js修改before伪元素的样式。我采用的方法是插入css rule，下面有简单的代码。在实际情况下，因为不能删掉css rule，所以需要做好css rule的缓存复用。</p>
+<pre><code><span class="hljs-keyword">var</span> styleSheet;
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">addCSSRule</span><span class="hljs-params">(selector, rules)</span> </span>{
+    <span class="hljs-keyword">if</span> (!styleSheet) {
+        <span class="hljs-keyword">var</span> style = <span class="hljs-built_in">document</span>.createElement(<span class="hljs-string">'style'</span>);
+        style.type = <span class="hljs-string">'text/css'</span>;
+        $(<span class="hljs-string">'head'</span>).eq(<span class="hljs-number">0</span>).prepend(style);
+        styleSheet = <span class="hljs-built_in">document</span>.styleSheets[<span class="hljs-number">0</span>];
+    }
+
+    <span class="hljs-keyword">if</span> (styleSheet.insertRule) {
+        styleSheet.insertRule(
+            selector + <span class="hljs-string">'{'</span> + rules + <span class="hljs-string">'}'</span>,
+            styleSheet.cssRules.length
+        );
+    } <span class="hljs-keyword">else</span> {
+        <span class="hljs-comment">// IE</span>
+        styleSheet.addRule(selector, rules, -<span class="hljs-number">1</span>);
+    }
+}
+</code></pre><h3 id="-">五</h3>
+<p>最后一个问题的解决方案则比较简单粗暴。获取<code>navigator.language || navigator.browserLanguage</code>的值判断其所处的语言环境。</p>
+<h3 id="jquery-emphasis-js">jQuery.emphasis.js</h3>
+<p>解决了这些问题之后，终于得到了一个可用的fallback。再根据标准来修改优化代码，就得到了<a href="https://github.com/zmmbreeze/jquery.emphasis">jQuery.emphasis.js</a>。这里有些它的<a href="http://nodejs.in/jquery.emphasis/demo.html">demo</a>。不过它没有解决所有的问题，目前已知的缺陷如下：</p>
+<ol>
+<li>不支持竖排（即不支持<code>position</code>为<code>right/left</code>）</li>
+<li>不支持特殊情况下的<code>inline-block</code>元素（比如默认元素有<code>padding-bottom</code>）</li>
+<li>如果浏览器不支持<code>transform</code>，则会有最小字体导致的着重符过大问题</li>
+</ol>
+<p>如果你还发现了其他问题，欢迎<a href="https://github.com/zmmbreeze/jquery.emphasis/issues">feedback</a>。</p>
+
+    </div>
+
+    <div class="info">
+        <h1>MZhou&#39;s blog - Taste of life.</h1>
+        <p>
+            <a href="https://github.com/zmmbreeze" target="_blank">zmmbreeze</a> / <a href="https://twitter.com/zhoumm">@zhoumm</a>
+        </p>
+        <p>2015-04-26 23:49</p>
+    </div>
+</div>
+</body>
+</html>

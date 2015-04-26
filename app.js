@@ -6,8 +6,13 @@ var path = require('path');
 var moment = require('moment');
 var FontSpider = require('font-spider');
 var highlight = require('highlight.js');
+var cheerio = require('cheerio');
 
-var template = fs.readFileSync('./template.mustache', {
+var blogTitle = 'MZhou\'s blog - Taste of life.';
+var blogTemplate = fs.readFileSync('./template/blog.mustache', {
+    'encoding': 'utf8'
+});
+var indexTemplate = fs.readFileSync('./template/index.mustache', {
     'encoding': 'utf8'
 });
 marked.setOptions({
@@ -30,16 +35,29 @@ var getMarkdowns = function () {
             var fileContent = fs.readFileSync('./' + filename, {
                 'encoding': 'utf8'
             });
+            var markedContent = marked(fileContent);
+            var $ = cheerio.load(markedContent);
+            var title = $('h1').text();
             result.push({
+                title: title,
                 index: result.length,
                 filename: filename,
                 filepath: filepath,
                 destpath: './' + path.basename(filepath, '.md') + '.html',
-                content: marked(fileContent),
+                content: markedContent,
                 mtime: moment(fileStats.mtime).format('YYYY-MM-DD HH:mm'),
-                ctime: moment(fileStats.ctime).format('YYYY-MM-DD HH:mm')
+                birthtime: moment(fileStats.birthtime).format('YYYY-MM-DD HH:mm'),
+                birthtimeDate: fileStats.birthtime
             });
         }
+    });
+
+    result.sort(function (a, b) {
+        var b = b.filename.split('.');
+        b = b && b[0] && parseInt(b[0], 10) || 0;
+        var a = a.filename.split('.');
+        a = a && a[0] && parseInt(a[0], 10) || 0;
+        return  b - a;
     });
     return result;
 };
@@ -48,20 +66,32 @@ var getMarkdowns = function () {
 var markdowns = getMarkdowns();
 markdowns.forEach(function (markData) {
     var data = {
-        data: markData,
-        all: markdowns
+        'data': markData,
+        'blogTitle': blogTitle,
+        'all': markdowns
     };
-    fs.writeFileSync(markData.destpath, mustache.render(template, data), {
+    fs.writeFileSync(markData.destpath, mustache.render(blogTemplate, data), {
         'encoding': 'utf8'
     });
-    console.log('Write:' + markData.destpath);
+    console.log('Write: ' + markData.destpath);
 });
+
+fs.writeFileSync(
+    './index.html',
+    mustache.render(indexTemplate, {
+        'blogTitle': blogTitle,
+        'all': markdowns
+    }),
+    {
+        'encoding': 'utf8'
+    }
+);
+console.log('Write: index.html');
 
 // generate font
 var fontspider = new FontSpider('./*.html').then(function () {
     console.log('Minify fonts done.');
 });
-
 
 
 // static server

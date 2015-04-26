@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>0.1+0.2=0.30000000000000004问题的探究</title>
+    <link rel="stylesheet" href="./assets/blog.css" />
+    <link rel="stylesheet" href="./assets/entry.css" />
+    <link rel="stylesheet" href="./assets/highlight.css" />
+</head>
+<body>
+<div class="main">
+    <a class="back" href="./">MZhou's blog</a>
+    <div class="entry">
+        <h1 id="0-1-0-2-0-30000000000000004-">0.1+0.2=0.30000000000000004问题的探究</h1>
+<p>今天花了一整天的时间复习二进制相关知识，在这里写下这篇blog作为总结！</p>
+<h2 id="-0-1-0-2-0-30000000000000004-">为什么“0.1+0.2=0.30000000000000004”？</h2>
+<p>首先声明这不是bug，原因在与十进制到二进制的转换导致的精度问题！其次这几乎出现在很多的编程语言中：C/C++,Java,Javascript中，准确的说：“使用了IEEE 754浮点数格式”来存储浮点类型(float 32,double 64)的任何编程语言都有这个问题！</p>
+<p>简要介绍下<a href="http://www.ibm.com/developerworks/cn/java/j-jtp0114/index.html">IEEE 754浮点格式</a>：它用科学记数法以底数为2的小数来表示浮点数。IEEE浮点数（共32位）用1位表示数字符号，用8为表示指数，用23为来表示尾数（即小数部分）。此处指数用移码存储，尾数则是原码（没有符号位）。之所以用移码是因为移码的负数的符号位为0，这可以保证浮点数0的所有位都是0。双精度浮点数(64位)，使用1位符号位、11位指数位、52位尾数位来表示。</p>
+<p>因为科学记数法有很多种方式来表示给定的数字，所以要规范化浮点数，以便用底数为2并且小数点左边为1的小数来表示（注意是二进制的，所以只要不为0则一定有一位为1），按照需要调节指数就可以得到所需的数字。例如：十进制的1.25 =&gt; 二进制的1.01 =&gt; 则存储时指数为0、尾数为1.01、符号位为0.（<a href="../?p=44001">十进制转二进制</a>）</p>
+<p>回到开头，为什么“<span style="background-color: #ffff00;">0.1+0.2=0.30000000000000004</span>”？首先声明这是javascript语言计算的结果（<span style="background-color: #ffff00;">注意Javascript的数字类型是以64位的IEEE 754格式存储的</span>）。正如同十进制无法精确表示1/3(0.33333...)一样，二进制也有无法精确表示的值。例如1/10。64位浮点数情况下：</p>
+<pre><code>十进制<span class="hljs-number">0</span>.<span class="hljs-number">1</span>
+<span class="hljs-status">=&gt;</span> 二进制<span class="hljs-number">0</span>.<span class="hljs-number">00011001100110011</span>...(循环<span class="hljs-number">0011</span>)
+<span class="hljs-status">=&gt;</span>尾数为<span class="hljs-number">1.1001100110011001100</span>...<span class="hljs-number">1100</span>（共<span class="hljs-number">52</span>位，除了小数点左边的<span class="hljs-number">1</span>），指数为-<span class="hljs-number">4</span>（二进制移码为<span class="hljs-number">00000000010</span>）,符号位为<span class="hljs-number">0</span>
+<span class="hljs-status">=&gt;</span> 存储为：<span class="hljs-number">0</span> <span class="hljs-number">00000000100</span> <span class="hljs-number">10011001100110011</span>...<span class="hljs-number">11001</span>
+<span class="hljs-status">=&gt;</span> 因为尾数最多<span class="hljs-number">52</span>位，所以实际存储的值为<span class="hljs-number">0</span>.<span class="hljs-number">00011001100110011001100110011001100110011001100110011001</span>
+
+十进制<span class="hljs-number">0</span>.<span class="hljs-number">2</span>
+<span class="hljs-status">=&gt;</span> 二进制<span class="hljs-number">0</span>.<span class="hljs-number">0011001100110011</span>...(循环<span class="hljs-number">0011</span>)
+<span class="hljs-status">=&gt;</span>尾数为<span class="hljs-number">1.1001100110011001100</span>...<span class="hljs-number">1100</span>（共<span class="hljs-number">52</span>位，除了小数点左边的<span class="hljs-number">1</span>），指数为-<span class="hljs-number">3</span>（二进制移码为<span class="hljs-number">00000000011</span>）,符号位为<span class="hljs-number">0</span>
+<span class="hljs-status">=&gt;</span> 存储为：<span class="hljs-number">0</span> <span class="hljs-number">00000000011</span> <span class="hljs-number">10011001100110011</span>...<span class="hljs-number">11001</span>
+因为尾数最多<span class="hljs-number">52</span>位，所以实际存储的值为<span class="hljs-number">0</span>.<span class="hljs-number">00110011001100110011001100110011001100110011001100110011</span>
+
+两者相加：
+<span class="hljs-number">0</span>.<span class="hljs-number">00011001100110011001100110011001100110011001100110011001</span> +  <span class="hljs-number">0</span>.<span class="hljs-number">00110011001100110011001100110011001100110011001100110011</span> = <span class="hljs-number">0</span>.<span class="hljs-number">01001100110011001100110011001100110011001100110011001100</span>
+转换成<span class="hljs-number">10</span>进制之后得到：<span class="hljs-number">0</span>.<span class="hljs-number">30000000000000004</span>！
+</code></pre><h2 id="-">浮点数中的特殊数字</h2>
+<p>除了一般范围内的数字之外，还有一些特殊数字：无穷大、负无穷大、-0和NaN（“代表不是数字”）。造成了如下一些特殊情况：</p>
+<pre><code><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title">FloatTest</span> {
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">main</span><span class="hljs-params">(String[] args)</span> </span>{
+        System.<span class="hljs-keyword">out</span>.println(<span class="hljs-number">0.1</span>f+<span class="hljs-number">0.2</span>f); <span class="hljs-comment">//0.3</span>
+        System.<span class="hljs-keyword">out</span>.println(<span class="hljs-number">0.1</span>d+<span class="hljs-number">0.2</span>d); <span class="hljs-comment">//0.30000000000000004</span>
+        System.<span class="hljs-keyword">out</span>.println(Math.sqrt(-<span class="hljs-number">1.0</span>)); <span class="hljs-comment">//NaN</span>
+        System.<span class="hljs-keyword">out</span>.println(<span class="hljs-number">0.0</span> / <span class="hljs-number">0.0</span>);<span class="hljs-comment">//NaN</span>
+        System.<span class="hljs-keyword">out</span>.println(<span class="hljs-number">1.0</span> / <span class="hljs-number">0.0</span>);<span class="hljs-comment">//Infinity</span>
+        System.<span class="hljs-keyword">out</span>.println(-<span class="hljs-number">1.0</span> / <span class="hljs-number">0.0</span>);<span class="hljs-comment">//-Infinity</span>
+        System.<span class="hljs-keyword">out</span>.println(<span class="hljs-number">0.0</span> / <span class="hljs-number">0.0</span> + <span class="hljs-number">1.0</span>);<span class="hljs-comment">//NaN + 1.0 = NaN</span>
+        System.<span class="hljs-keyword">out</span>.println(<span class="hljs-number">1.0</span> / <span class="hljs-number">0.0</span> + <span class="hljs-number">1.0</span>);<span class="hljs-comment">//无穷大 + 1.0 = Infinity</span>
+        System.<span class="hljs-keyword">out</span>.println(<span class="hljs-number">1.0</span> / <span class="hljs-number">0.0</span> + <span class="hljs-number">1.0</span> / <span class="hljs-number">0.0</span>);<span class="hljs-comment">//无穷大 + 无穷大 = Infinity</span>
+        System.<span class="hljs-keyword">out</span>.println(<span class="hljs-number">0.0</span> / <span class="hljs-number">0.0</span> &gt; <span class="hljs-number">1.0</span>);<span class="hljs-comment">//NaN &gt; 1.0 = false</span>
+        System.<span class="hljs-keyword">out</span>.println(<span class="hljs-number">0.0</span> / <span class="hljs-number">0.0</span> == <span class="hljs-number">1.0</span>);<span class="hljs-comment">//NaN == 1.0 = false</span>
+        System.<span class="hljs-keyword">out</span>.println(<span class="hljs-number">0.0</span> / <span class="hljs-number">0.0</span> &lt; <span class="hljs-number">1.0</span>);<span class="hljs-comment">//NaN &lt; 1.0 = false</span>
+        System.<span class="hljs-keyword">out</span>.println(<span class="hljs-number">0.0</span> / <span class="hljs-number">0.0</span> == <span class="hljs-number">0.0</span> / <span class="hljs-number">0.0</span>);<span class="hljs-comment">//NaN == NaN = false</span>
+        System.<span class="hljs-keyword">out</span>.println(<span class="hljs-number">0.0</span> == -<span class="hljs-number">0.01</span>); <span class="hljs-comment">//false</span>
+    }
+}
+</code></pre><h2 id="-">更精确的计算</h2>
+<p>既然一般的浮点数计算有这么多问题，那么如何实现更精确的计算呢？Java中提供了<strong>BigDecimal</strong>类实现基于十进制的浮点数计算。在Javascript 2（目前浏览器不支持）中提供一种use decimal;实现十进制浮点数计算：</p>
+<pre><code>{
+    use decimal;
+    <span class="hljs-variable"><span class="hljs-keyword">var</span> a</span> = <span class="hljs-number">0.1</span>; <span class="hljs-comment">// a is a decimal</span>
+    <span class="hljs-variable"><span class="hljs-keyword">var</span> b</span> = <span class="hljs-number">0.2</span>; <span class="hljs-comment">// b is a decimal</span>
+    <span class="hljs-variable"><span class="hljs-keyword">var</span> c</span> = a + b; <span class="hljs-comment">// c is a decimal (0.3)</span>
+}
+<span class="hljs-variable"><span class="hljs-keyword">var</span> d</span> = <span class="hljs-number">0.1</span> + <span class="hljs-number">0.2</span>; <span class="hljs-comment">// d is a double (0.30000000000000004)</span>
+<span class="hljs-variable"><span class="hljs-keyword">var</span> a</span> = <span class="hljs-number">0.1</span>m; <span class="hljs-comment">// a is a decimal</span>
+<span class="hljs-variable"><span class="hljs-keyword">var</span> b</span> = <span class="hljs-number">0.2</span>m; <span class="hljs-comment">// b is a decimal</span>
+<span class="hljs-variable"><span class="hljs-keyword">var</span> c</span> = a + b; <span class="hljs-comment">// c == 0.3m</span>
+</code></pre><p>C#也支持如上的m操作符实现十进制浮点数计算。</p>
+<p>2013/07/12 更新：Javascript 目前有<a href="http://mathjs.org/">MathJs</a>这样的第三方库可以实现精确的计算。</p>
+
+    </div>
+
+    <div class="info">
+        <h1>MZhou&#39;s blog - Taste of life.</h1>
+        <p>
+            <a href="https://github.com/zmmbreeze" target="_blank">zmmbreeze</a> / <a href="https://twitter.com/zhoumm">@zhoumm</a>
+        </p>
+        <p>2015-04-26 21:25</p>
+    </div>
+</div>
+</body>
+</html>

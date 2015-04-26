@@ -1,0 +1,101 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Atom-Shell 入门</title>
+    <link rel="stylesheet" href="./assets/blog.css" />
+    <link rel="stylesheet" href="./assets/entry.css" />
+    <link rel="stylesheet" href="./assets/highlight.css" />
+</head>
+<body>
+<div class="main">
+    <a class="back" href="./">MZhou's blog</a>
+    <div class="entry">
+        <h1 id="atom-shell-">Atom-Shell 入门</h1>
+<p>现在已经有很多框架可以让我们用JavaScript、HTML和CSS来编写跨平台桌面应用，Atom Shell便是其中之一。Atom Shell基于nodejs和Chromium实现，Github的开源编辑器Atom便是基于Atom shell和Coffee scrpit开发的。</p>
+<p>Chromium浏览器可以分为两个部分：Browser端和Render端。Browser端负责与本地系统交互：创建窗口、控制托盘图标等等。Render端负责绘制页面。两者通过IPC交互。Atom Shell的实现是在Browser端和Render端分别嵌入了nodejs。这样Browser和Render两部分就都可以使用nodejs提供的api了，也可以在Browser端用javascript来调用本地系统相关的API。</p>
+<h2 id="browser-">Browser端</h2>
+<p>在Web app中我们通常会有两种javascript脚本：服务器端脚本和客户端端脚本。客户端端脚本运行于浏览器中，服务器端脚本运行于nodejs中。在Atom Shell中有类似的概念，运行于Render端页面中的脚本和运行于browser端中的脚本。分别可以称它们为：Render端脚本和Browser端脚本。</p>
+<p>在传统的Web app中，服务器端脚本和客户端脚本通常使用web sockets来通信。在Atom Shell中，Render端脚本需要使用<a href="https://github.com/atom/atom-shell/blob/master/docs/api/ipc-renderer.md">ipc模块</a>来发送信息给rowser端。同时Atom Shell还提供了一个更易用的<a href="https://github.com/atom/atom-shell/blob/master/docs/api/remote.md">remote</a>模块来支持通信。</p>
+<h2 id="render-">Render端</h2>
+<p>普通的网页是无法操作浏览器以外的本地系统的。而在Atom Shell中nodejs api可以在网页中使用，所以开发者可以在网页中访问本地资源，就像<a href="https://github.com/rogerwang/node-webkit">Node-Webkit</a>一样。</p>
+<p>但是和Node-Webkit不一样的是：不能直接在网页中（Render端）操作本地资源，只能通过remote模块调用Browser端脚本操作本地资源。</p>
+<h2 id="demo">DEMO</h2>
+<p>通常一个Atom Shell app的文件目录如下：</p>
+<pre><code>your-app/
+├── package<span class="hljs-class">.json</span>
+├── main<span class="hljs-class">.js</span>
+└── index.html
+</code></pre><p><code>package.json</code>的格式和普通的Node模块中的一样。其中属性<code>main</code>的值表示app的入口脚本，这个脚本会运行在Browser端中。如下是package.json文件的样例：</p>
+<pre><code>{
+    "<span class="hljs-attribute">name</span>"    : <span class="hljs-value"><span class="hljs-string">"your-app"</span></span>,
+    "<span class="hljs-attribute">version</span>" : <span class="hljs-value"><span class="hljs-string">"0.1.0"</span></span>,
+    "<span class="hljs-attribute">main</span>"    : <span class="hljs-value"><span class="hljs-string">"main.js"</span>
+</span>}
+</code></pre><p>在<code>main.js</code>中应该创建窗口并处理相应的系统事件，下面是一个典型的样例：</p>
+<pre><code><span class="hljs-comment">// 用于控制app的life circle</span>
+<span class="hljs-keyword">var</span> app = <span class="hljs-built_in">require</span>(<span class="hljs-string">'app'</span>);
+<span class="hljs-comment">// 用于创建本地窗口的模块</span>
+<span class="hljs-keyword">var</span> BrowserWindow = <span class="hljs-built_in">require</span>(<span class="hljs-string">'browser-window'</span>);    
+<span class="hljs-comment">// 把app的crash情况发送给服务器</span>
+<span class="hljs-built_in">require</span>(<span class="hljs-string">'crash-reporter'</span>).start();
+
+<span class="hljs-comment">// 保持一个全局的window对象引用，</span>
+<span class="hljs-comment">// 如果你不这么做，window对象会在GC启动后被自动垃圾收集机制释放</span>
+<span class="hljs-keyword">var</span> mainWindow = <span class="hljs-literal">null</span>;
+
+<span class="hljs-comment">// 在所有窗口关闭后关闭app</span>
+app.on(<span class="hljs-string">'window-all-closed'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
+  <span class="hljs-keyword">if</span> (process.platform != <span class="hljs-string">'darwin'</span>)
+    app.quit();
+});
+
+<span class="hljs-comment">// 这个方法会在Atom Shell初始化结束后调用回调函数</span>
+app.on(<span class="hljs-string">'ready'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
+  <span class="hljs-comment">// 创建窗口</span>
+  mainWindow = <span class="hljs-keyword">new</span> BrowserWindow({width: <span class="hljs-number">800</span>, height: <span class="hljs-number">600</span>});
+
+  <span class="hljs-comment">// 加载index.html</span>
+  mainWindow.loadUrl(<span class="hljs-string">'file://'</span> + __dirname + <span class="hljs-string">'/index.html'</span>);
+
+  <span class="hljs-comment">// 在窗口关闭时触发</span>
+  mainWindow.on(<span class="hljs-string">'closed'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
+      <span class="hljs-comment">// 移除window对象的引用</span>
+      <span class="hljs-comment">// 通常如果是多窗口的app，你需要把window对象存储到一个数组里面，而在close时把对应的window对象移除掉</span>
+    mainWindow = <span class="hljs-literal">null</span>;
+  });
+});
+</code></pre><p>最后创建需要在窗口中显示的<code>index.html</code>：</p>
+<pre><code><span class="hljs-doctype">&lt;!DOCTYPE html&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">html</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-title">head</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-title">title</span>&gt;</span>Hello World!<span class="hljs-tag">&lt;/<span class="hljs-title">title</span>&gt;</span>
+  <span class="hljs-tag">&lt;/<span class="hljs-title">head</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-title">body</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-title">h1</span>&gt;</span>Hello World!<span class="hljs-tag">&lt;/<span class="hljs-title">h1</span>&gt;</span>
+    We are using node.js <span class="hljs-tag">&lt;<span class="hljs-title">script</span>&gt;</span><span class="livecodeserver">document.<span class="hljs-built_in">write</span>(<span class="hljs-built_in">process</span>.<span class="hljs-built_in">version</span>)</span><span class="hljs-tag">&lt;/<span class="hljs-title">script</span>&gt;</span> and atom-shell <span class="hljs-tag">&lt;<span class="hljs-title">script</span>&gt;</span><span class="stylus">document.<span class="hljs-function"><span class="hljs-title">write</span><span class="hljs-params">(process.versions[<span class="hljs-string">'atom-shell'</span>])</span></span></span><span class="hljs-tag">&lt;/<span class="hljs-title">script</span>&gt;</span>.
+  <span class="hljs-tag">&lt;/<span class="hljs-title">body</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-title">html</span>&gt;</span>
+</code></pre><h2 id="-app">运行App</h2>
+<p>首先下载Atom Shell的<a href="https://github.com/atom/atom-shell/releases">可执行文件</a>。然后运行如下命令执行app：</p>
+<ol>
+<li>windows：<code>.\atom-shell\atom.exe your-app\</code></li>
+<li>Linux: <code>./atom-shell/atom your-app/</code></li>
+<li>Mac OS X: <code>./Atom.app/Contents/MacOS/Atom your-app/</code></li>
+</ol>
+<h2 id="-">打包</h2>
+<p>你只需要把app的文件夹命名为<code>app</code>，并把它放在Atom Shell的资源目录下。在OS X系统中为<code>Atom.app/Contents/Resources/</code>，在Linux和Windows上为<code>resources/</code>。然后执行<code>Atom.app</code>（在Linux中为<code>atom</code>，在windows中为<code>atom.exe</code>）即可。然后把<code>atom-shell</code>文件夹压缩打包分发给用户即可。</p>
+<p>如果你用的打包工具是<code>grunt</code>，那么可以用<a href="https://github.com/atom/grunt-download-atom-shell">grunt-download-atom-shell</a>来自动下载对应平台的Atom Shell。</p>
+
+    </div>
+
+    <div class="info">
+        <h1>MZhou&#39;s blog - Taste of life.</h1>
+        <p>
+            <a href="https://github.com/zmmbreeze" target="_blank">zmmbreeze</a> / <a href="https://twitter.com/zhoumm">@zhoumm</a>
+        </p>
+        <p>2015-04-26 20:26</p>
+    </div>
+</div>
+</body>
+</html>
