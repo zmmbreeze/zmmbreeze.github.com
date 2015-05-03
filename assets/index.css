@@ -24,7 +24,9 @@
 
 body {
     color: #424B50;
-    font: 20px/1.6 "notoserif","Helvetica Neue",Arial,"sourcehansans","Hiragino Sans GB","Hiragino Sans GB W3","Microsoft YaHei","Wenquanyi Micro Hei",sans-serif;
+    font-family: "notoserif","Helvetica Neue",Arial,"sourcehansans","Hiragino Sans GB","Hiragino Sans GB W3","Microsoft YaHei","Wenquanyi Micro Hei",sans-serif;
+    font-size: 20px;
+    line-height: 1.6;
 }
 
 .main {
