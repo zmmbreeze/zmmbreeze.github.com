@@ -15,11 +15,11 @@
 <blockquote>
 <p>这篇文章翻译自HTML5Rocks的<a href="http://updates.html5rocks.com/2015/04/web-animations-naming">Simplified Concepts in Web Animations Naming</a>。</p>
 </blockquote>
-<p>最早支持Web Animation的浏览器是 Chrome 36，在Chrome 39中更新了对播放的控制。在Javascript中我们可以调用<code>Element.animate()</code>方法来声明式地播放动画。详细的信息可以在W3C Web Animation规范中找到。</p>
-<p>这里有一个正在开发中polyfill库，实现Web Animation标准。所有的现在浏览器都支持它。核心方法现在都处于可用状态，十分推荐大家用它来构建富客户端的Web App。</p>
+<p>最早支持Web Animation的浏览器是<a href="http://updates.html5rocks.com/2014/05/Web-Animations---element-animate-is-now-in-Chrome-36">Chrome 36</a>，在<a href="http://updates.html5rocks.com/2014/12/web-animation-playback">Chrome 39</a>中又更新了对播放的控制。在Javascript中我们可以调用<code>Element.animate()</code>方法来声明式地播放动画。详细的信息可以在<a href="http://w3c.github.io/web-animations/">W3C Web Animation规范</a>中找到。</p>
+<p>这里有一个正在开发中<a href="https://github.com/web-animations/web-animations-js">polyfill库</a>，实现了Web Animation标准。所有的现代浏览器都支持它。核心方法现在都处于可用状态，十分推荐大家用它来构建富客户端的Web App。</p>
 <h2 id="constructor-group-">Constructor和Group的变化</h2>
-<p>Web Animation标准同样也描述了animation和player的groups、sequences和constructors。这些特性可以在web-animations-next这个polyfill找到。这个polyfill被用来展示正在讨论中未被实现的特性。为了响应开发者的反馈信息，Web Animation的标准制作团队正在修改部分命名，使得其语义更加清晰易懂。</p>
-<p>FXTF最近在澳大利亚悉尼举行了一次会面讨论重命名。很多开发者提出有些命名非常另人困惑。讨论之后对如下命名变化取得了一致同意：</p>
+<p>Web Animation标准同样也描述了动画的groups、sequences和constructors。这些特性可以在<a href="https://github.com/web-animations/web-animations-js#web-animations-nextminjs">web-animations-next</a>这个polyfill找到。这个polyfill被用来展示正在讨论中未被实现的特性。为了响应开发者的反馈信息，Web Animation的标准制作团队正在修改部分命名，使得其语义更加清晰易懂。</p>
+<p><a href="http://www.w3.org/Graphics/fx/">FXTF</a>最近在澳大利亚悉尼举行了一次会面<a href="https://www.mail-archive.com/public-fx@w3.org/msg00151.html">讨论</a><a href="https://www.mail-archive.com/public-fx@w3.org/msg00158.html">重命名方案</a>。很多开发者提出有些命名非常另人困惑。讨论之后对如下命名变化取得了一致同意：</p>
 <ul>
 <li><code>Animation</code>修改为<code>KeyframeEffect</code></li>
 <li><code>AnimationSequence</code>修改为<code>SequenceEffect</code></li>
@@ -29,8 +29,8 @@
 <p>记住只要是Chrome原生支持的Web Animation或者是polyfill提供的，都是通过<code>Element.animate()</code>来创建animation和player的。所以现有的使用<code>Element.animate()</code>的代码不需要改动。</p>
 <p>新的命名更加贴切易懂，例如<code>KeyframeEffect</code>描述了HTML元素基于关键帧的动画效果。想对应的新<code>Animation</code>对象描述了动画的各种状态（例如playing、pause等等）。</p>
 <h2 id="-">对现有代码的影响</h2>
-<p>如果你正在基于web-animations-next这个polyfill来使用部分draft规范，你必须要更新你的代码来使用新的命名。因为polyfill修改策略的原因，我们将会依旧支持旧的版本，并且在你使用即将废弃的api和命名时打印出告警日志。</p>
-<p>如果你想尝鲜新的特性和命名，那么可以使用v2版本的polyfill。最后请一定要订阅web-animations-changes小组来了解更新。</p>
+<p>如果你正在基于web-animations-next这个polyfill来使用部分draft规范，你必须要更新你的代码来使用新的命名。因为<a href="https://github.com/web-animations/web-animations-js#breaking-changes">polyfill修改策略</a>的原因，我们将会依旧支持旧的版本，并且在你使用即将废弃的api和命名时打印出告警日志。</p>
+<p>如果你想尝鲜新的特性和命名，那么可以使用<a href="https://github.com/web-animations/web-animations-js/releases">v2版本</a>的polyfill。最后请一定要订阅<a href="https://groups.google.com/forum/#!forum/web-animations-changes">web-animations-changes</a>小组来了解最新进展。</p>
 
     </div>
 
@@ -39,7 +39,7 @@
         <p>
             <a href="https://github.com/zmmbreeze" target="_blank">zmmbreeze</a> / <a href="https://twitter.com/zhoumm">@zhoumm</a>
         </p>
-        <p>2015-05-03 21:16</p>
+        <p>2015-05-03 22:21</p>
     </div>
 </div>
 </body>
