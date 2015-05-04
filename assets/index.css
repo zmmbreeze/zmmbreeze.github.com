@@ -37,11 +37,13 @@ body {
 a {
     color: #4A89DC;
     text-decoration: none;
+    /*
     text-shadow: .03em 0 #FFF,-.03em 0 #FFF,0 .03em #FFF,0 -.03em #FFF,.06em 0 #FFF,-.06em 0 #FFF,.09em 0 #FFF,-.09em 0 #FFF,.12em 0 #FFF,-.12em 0 #FFF,.15em 0 #FFF,-.15em 0 #FFF;
     background-image: linear-gradient(#FFF 50%, currentColor 50%);
     background-repeat: repeat-x;
     background-position: 0 1.2em;
     background-size: 1px 1px;
+    */
 }
 
 
@@ -72,6 +74,7 @@ a {
     content: '- ';
 }
 .list small {
+    display: block;
     margin-left: 1em;
     font-size: 14px;
     color: #CCC;
