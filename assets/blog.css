@@ -25,6 +25,12 @@
 body {
     color: #424B50;
     font: 20px/1.6 "notoserif","Helvetica Neue",Arial,"sourcehansans","Hiragino Sans GB","Hiragino Sans GB W3","Microsoft YaHei","Wenquanyi Micro Hei",sans-serif;
+    background-color: #656D78;
+}
+
+.main {
+    overflow: hidden;
+    background: #FFF;
 }
 
 .info {
