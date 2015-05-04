@@ -1,0 +1,133 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>原型链上的DOM Attributes</title>
+    <link rel="stylesheet" href="./assets/blog.css" />
+    <link rel="stylesheet" href="./assets/entry.css" />
+    <link rel="stylesheet" href="./assets/highlight.css" />
+</head>
+<body>
+<div class="main">
+    <a class="back" href="./">MZhou's blog</a>
+    <div class="entry">
+        <h1 id="-dom-attributes">原型链上的DOM Attributes</h1>
+<blockquote>
+<p>本文翻译自html5rocks的<a href="http://updates.html5rocks.com/2015/04/DOM-attributes-now-on-the-prototype">DOM Attributes now on the prototype chain</a>。</p>
+</blockquote>
+<p>Chrome开发小组最近发表声明他们正在將<a href="https://groups.google.com/a/chromium.org/forum/#!topic/blink-dev/H0MGw0jkdn4">DOM properties移动到原型链</a>中。这个更新将会在<a href="https://www.chromestatus.com/feature/6052436003258368">Chrome 43</a>（2015年4月发布beta版本）中实现。这可以让Chrome与<a href="https://heycam.github.io/webidl/#es-attributes">Web IDL标准</a>以及其他浏览器（IE和Firfox）保持一致。注：旧的基于Webkit的浏览器与标准不兼容但是safari已经与标准兼容了。</p>
+<blockquote>
+<p>注意：本篇文章中Attribute与Property没有区别，并可以互换。ECMA script标准定义了<code>Properties</code>包括<code>Attributes</code>。一个JS property等于一个WebIDL Attribute。本文里面的Attribute并不是HTML Attribute（例如image元素上<code>class</code>）。</p>
+</blockquote>
+<p>这项更新有很多好处：</p>
+<ul>
+<li>因为遵循了规范，所以跨浏览器的兼容性更好（IE和Firefox早就与规范保持一致了）</li>
+<li>让开发者一致且高效地创建DOM对象上的getter/setter</li>
+<li>提高DOM编程的灵活性。例如：你可以更加方便地实现polyfill方案。你可以模拟在某些浏览器中缺失的属性。或者你可以重写DOM属性的行为</li>
+</ul>
+<p>例如，假设有一个W3C规范规定的新属性叫做<code>isSuperContentEditable</code>，并且Chrome还没有实现它。但是我们可以实现一个polyfill去模拟这个特性。作为一个库的开发者，很自然地你会想到修改<code>prototype</code>来实现这个属性，这样更加高效。</p>
+<pre><code>Object.defineProperty(HTMLDivElement.prototype, <span class="hljs-string">"isSuperContentEditable"</span>, {
+    <span class="hljs-keyword">get</span>: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{ <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>; },
+    <span class="hljs-keyword">set</span>: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{ <span class="hljs-comment">/* some logic to set it up */</span> },
+});
+</code></pre><p>在这次更新之前，为了在Chrome中与其他DOM属性保持一致，一定要为每个实例增加新的<code>isSuperContentEditable</code>属性。为页面上的每一个<code>HTMLDivElement</code>实例创建新属性是非常低效的。</p>
+<p>这些更新对Web平台的一致性、性能和规范化都很重要。当然这也会带来一些不兼容的问题。如果你以前依赖过Chrome或Webkit的这个特性，强烈建议检查下自己的站点并阅读下面的更新总结。</p>
+<h2 id="-">更新总结</h2>
+<h3 id="-dom-hasownproperties-false-">在DOM实例上调用<code>hasOwnProperties</code>现在会返回<code>false</code></h3>
+<p>有时开发者会调用<code>hasOwnProperties</code>方法来检查属性是否某个对象上。以后这将不再起作用。因为DOM属性都移动到了原型链中，而<code>hasOwnProperties</code>方法不会检查原型链上是否有这个属性。</p>
+<p>在Chrome 42及以前版本中，如下代码的执行结果为<code>true</code>。</p>
+<pre><code>&gt; <span class="hljs-keyword">div</span> = document.createElement(<span class="hljs-string">"div"</span>);
+&gt; <span class="hljs-keyword">div</span>.hasOwnProperty(<span class="hljs-string">"isContentEditable"</span>);
+<span class="hljs-constant">true</span>
+</code></pre><p>在Chrome 43及之后的版本中华，将会返回<code>false</code>。</p>
+<pre><code>&gt; <span class="hljs-keyword">div</span> = document.createElement(<span class="hljs-string">"div"</span>);
+&gt; <span class="hljs-keyword">div</span>.hasOwnProperty(<span class="hljs-string">"isContentEditable"</span>);
+<span class="hljs-constant">false</span>
+</code></pre><p>这意味着如果你想要检查DOM上的<code>isContentEditable</code>属性是否可用，那么需要检查HTMLObject的prototype。例如：<code>HTMLDivElement</code>继承自<code>HTMLElement</code> ，而<code>HTMLElement</code>上定义了<code>isContentEditable</code>属性。</p>
+<pre><code>&gt; HTMLElement.prototype.hasOwnProperty(<span class="hljs-string">"isContentEditable"</span>);
+<span class="hljs-literal">true</span>
+</code></pre><p>你也不一定要用<code>hasOwnProperty</code>。我们推荐更为简单的<code>in</code>操作符，它会检查整个原型链。</p>
+<pre><code><span class="hljs-keyword">if</span>(<span class="hljs-string">"isContentEditable"</span> <span class="hljs-operator">in</span> <span class="hljs-operator">div</span>) {
+   <span class="hljs-comment"> // We have support!!</span>
+}
+</code></pre><h3 id="dom-object-getownpropertydescriptor-">DOM实例上调用Object.getOwnPropertyDescriptor方法不再会返回属性的描述对象</h3>
+<p>如果你的站点需要获取DOM实例上的属性描述对象，那么你就需要在原型链中获取了。</p>
+<p>在Chrome 42及以前的版本中获取属性描述对象可以这么做：</p>
+<pre><code>&gt; Object.getOwnPropertyDescriptor(div, <span class="hljs-string">"isContentEditable"</span>);
+Object {<span class="hljs-string">value:</span> <span class="hljs-string">""</span>, <span class="hljs-string">writable:</span> <span class="hljs-literal">true</span>, <span class="hljs-string">enumerable:</span> <span class="hljs-literal">true</span>, <span class="hljs-string">configurable:</span> <span class="hljs-literal">true</span>}
+</code></pre><p>Chrome 43及以后的版本中就只会返回<code>undefined</code>：</p>
+<pre><code>&gt; <span class="hljs-built_in">Object</span>.getOwnPropertyDescriptor(div, <span class="hljs-string">"isContentEditable"</span>);
+<span class="hljs-literal">undefined</span>
+</code></pre><p>这意味着如果你想要获取<code>isContentEditable</code>属性的描述对象，那就需要循着原型链溯流而上找：</p>
+<pre><code>&gt; <span class="hljs-built_in">Object</span>.getOwnPropertyDescriptor(HTMLElement.prototype, <span class="hljs-string">"isContentEditable"</span>);
+<span class="hljs-built_in">Object</span> {<span class="hljs-literal">get</span>: function, <span class="hljs-literal">set</span>: function, enumerable: <span class="hljs-keyword">false</span>, configurable: <span class="hljs-keyword">false</span>}
+</code></pre><h3 id="json-stringify-dom-">JSON.stringify不再会序列化DOM属性</h3>
+<p>JSON.stringify不会序列化prototype上的DOM属性。例如，如果你尝试序列化Push Notication的<code>PushSubscription</code>对象，那么你的代码会受到影响。</p>
+<p>Chrome 42及以前的版本下，如下代码可以正常工作：</p>
+<pre><code>&gt; <span class="hljs-built_in">JSON</span>.stringify(subscription);
+{
+    <span class="hljs-string">"endpoint"</span>: <span class="hljs-string">"https://something"</span>,
+    <span class="hljs-string">"subscriptionId"</span>: <span class="hljs-string">"SomeID"</span>
+}
+</code></pre><p>Chrome 43及以后的版本中将不会序列化DOM属性，因为他们定义在prototype上。最后只会返回一个空对象。</p>
+<pre><code><span class="hljs-blockquote">&gt; JSON.stringify(subscription);</span>
+{}
+</code></pre><p>你必须要提供你的自己的序列化方法，举个例子:</p>
+<pre><code><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">stringifyDOMObject</span><span class="hljs-params">(object)</span> </span>{
+    <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">deepCopy</span><span class="hljs-params">(src)</span> </span>{
+        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> src != <span class="hljs-string">"object"</span>)
+            <span class="hljs-keyword">return</span> src;
+        <span class="hljs-keyword">var</span> dst = <span class="hljs-built_in">Array</span>.isArray(src) ? [] : {};
+        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> property <span class="hljs-keyword">in</span> src) {
+            dst[property] = deepCopy(src[property]);
+        }
+        <span class="hljs-keyword">return</span> dst;
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">JSON</span>.stringify(deepCopy(object));
+}
+<span class="hljs-keyword">var</span> s = stringifyDOMObject(domObject);
+</code></pre><h3 id="-">在严格模式中修改只读属性将会抛出错误</h3>
+<p>在严格模式中修改只读属性应该会抛出异常。看如下样例：</p>
+<pre><code><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">foo</span><span class="hljs-params">()</span> </span>{
+<span class="hljs-pi">    "use strict"</span>;
+    <span class="hljs-keyword">var</span> d = <span class="hljs-built_in">document</span>.createElement(<span class="hljs-string">"div"</span>);
+    <span class="hljs-built_in">console</span>.log(d.isContentEditable);
+    d.isContentEditable = <span class="hljs-number">1</span>;
+    <span class="hljs-built_in">console</span>.log(d.isContentEditable);
+}
+</code></pre><p>Chrome 42及以前的版本中修改只读DOM属性不会抛出异常但也不会生效。</p>
+<pre><code><span class="hljs-comment">// Chrome 42 and earlier behavior</span>
+&gt; foo();
+<span class="hljs-literal">false</span> <span class="hljs-comment">// isContentEditable</span>
+<span class="hljs-literal">false</span> <span class="hljs-comment">// isContentEditable (after writing to read-only property)</span>
+</code></pre><p>在Chrome 43及以后版本中会抛出一个异常。</p>
+<pre><code>// <span class="hljs-type">Chrome</span> <span class="hljs-number">43</span> <span class="hljs-keyword">and</span> onwards behavior
+&gt; foo();
+<span class="hljs-literal">false</span>
+<span class="hljs-type">Uncaught</span> <span class="hljs-type">TypeError</span>: <span class="hljs-type">Cannot</span> <span class="hljs-type">set</span> property isContentEditable <span class="hljs-keyword">of</span> <span class="hljs-comment">#&lt;HTMLElement&gt; which has only a getter</span>
+</code></pre><h2 id="-">我有个问题，我该怎么做？</h2>
+<p>遵循本文的指导来修改现有代码，或者留下评论与我讨论。</p>
+<h2 id="-">我见过一个站点有类似的问题，我该怎么做？</h2>
+<p>好问题，大多数问题都是因为站点需要使用<code>getOwnProperty</code>方法来做属性支持与否的检测，来兼容旧的浏览器。那么那个站点的开发者可以做如下事情：</p>
+<ul>
+<li>在Chrome的issur tracker上提交一个关于受影响站点的issue</li>
+<li>为Webkit提交一个issue：<a href="https://bugs.webkit.org/show_bug.cgi?id=49739">https://bugs.webkit.org/show_bug.cgi?id=49739</a></li>
+</ul>
+<h2 id="-">我就是对这个改动感兴趣</h2>
+<ul>
+<li>最早在2010年发现了这个问题：<a href="https://code.google.com/p/chromium/issues/detail?id=43394">https://code.google.com/p/chromium/issues/detail?id=43394</a></li>
+<li><a href="https://codereview.chromium.org/984523003/">Code Review</a> 并提交</li>
+</ul>
+
+    </div>
+
+    <div class="info">
+        <h1>MZhou&#39;s blog - Taste of life.</h1>
+        <p>
+            <a href="https://github.com/zmmbreeze" target="_blank">zmmbreeze</a> / <a href="https://twitter.com/zhoumm">@zhoumm</a>
+        </p>
+        <p>2015-05-04 22:54</p>
+    </div>
+</div>
+</body>
+</html>
