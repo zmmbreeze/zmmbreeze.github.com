@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Permissions API</title>
+    <link rel="stylesheet" href="./assets/blog.css" />
+    <link rel="stylesheet" href="./assets/entry.css" />
+    <link rel="stylesheet" href="./assets/highlight.css" />
+</head>
+<body>
+<div class="main">
+    <a class="back" href="./">MZhou's blog</a>
+    <div class="entry">
+        <h1 id="permissions-api">Permissions API</h1>
+<blockquote>
+<p>这篇文章翻译自HTML5ROCKS的<a href="http://updates.html5rocks.com/2015/04/permissions-api-for-the-web">Permissions API</a>。</p>
+</blockquote>
+<p>如果你以前使用过<a href="https://developer.mozilla.org/en-US/docs/Web/API/Geolocation/Using_geolocation">Geolocation API</a>，那么你很可能希望可以检查自己是否有权限来使用Geolocation API并且不展示确认框。这个简单的愿望目前是不可能的。你必须要先请求获取目前的位置，然后或许能拿到位置，这表示你有权限。也有可能弹出一个确认框给用户确认是否给权限。</p>
+<p>并不是所有的API都是这样工作的。Notification API提供了<a href="https://notifications.spec.whatwg.org/#permission">Notification.permission</a>来让你可以检查自己是否有权限。</p>
+<p>Web平台的API一直在发展，现在有必要提供一个标准的方法来让开发者统一检查权限。而不是记住每种API的使用方法。<a href="https://www.chromestatus.com/feature/6376494003650560">Chrome 43版本</a>提供了<a href="https://w3c.github.io/permissions/">Permision API</a>，这个APi提供了统一的方法来检查权限状态。</p>
+<h2 id="permissions-query-">permissions.query()</h2>
+<p><code>permissions.query()</code>方法可以用来检查是否有权限。它会返回三种状态：<a href="https://w3c.github.io/permissions/#h-status-of-a-permission">granted（有权限）、denied（没有权限）或者prompt（需要用户确认）</a>。例如：</p>
+<pre><code><span class="hljs-comment">// Check for Geolocation API permissions</span>
+navigator.permissions.query({name:<span class="hljs-string">'geolocation'</span>}).then(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(permissionStatus)</span>
+</span>{
+    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'geolocation permission status is '</span>, permissionStatus.status);
+    permissionStatus.onchange = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
+        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'geolocation permission status has changed to '</span>, <span class="hljs-keyword">this</span>.status);
+    };
+});
+</code></pre><p>query方法的输入是一个<a href="https://w3c.github.io/permissions/#h-permission-descriptor">PermissionDescripter</a>对象，你可以在这个对象上定义权限的名字。方法的返回结果是一个Promise对象，用于异步获取<a href="https://w3c.github.io/permissions/#idl-def-PermissionStatus">PermissionStatus</a>对象。你可以检查这个对象的status值来检查权限。你也可以监听<code>permissionStatus.onchange</code>事件，来处理权限状态改变的情况。</p>
+<h2 id="-permissiondescriptors">支持的PermissionDescriptors</h2>
+<p>在上面的样例中，我们知道了如何检查Geolocation API的权限，所用的权限描述对象为：<code>{name:&#39;geolocation&#39;}</code>。</p>
+<p>Notification API的权限描述对象也是类似的，只需要一个name属性：<code>{name:&#39;notifications&#39;}</code>。</p>
+<p><a href="https://w3c.github.io/permissions/#h-push">Push</a>和<a href="https://w3c.github.io/permissions/#h-midi">midi</a> API则有一个各自特有的额外参数。</p>
+<p>对于Push API的权限检查，你可以提供一个userVisible参数。这个参数表明了你是否想让每条信息都显示一个通知，如果不显示通知则便是静默处理每条push信息（目前Chrome仅仅支持有通知的push信息）。你可以这样使用：</p>
+<pre><code><span class="hljs-tag">navigator</span><span class="hljs-class">.permissions</span><span class="hljs-class">.query</span>({<span class="hljs-attribute">name</span>:<span class="hljs-string">'push'</span>, <span class="hljs-attribute">userVisible</span>:true})
+</code></pre><p>Midi API有一个sysex参数。这个参数表明了你是否需要系统排除信息。Midi的权限检查方法如下：</p>
+<pre><code><span class="hljs-tag">navigator</span><span class="hljs-class">.permissions</span><span class="hljs-class">.query</span>({<span class="hljs-attribute">name</span>:<span class="hljs-string">'midi'</span>, <span class="hljs-attribute">sysex</span>:true})
+</code></pre><h2 id="-">请求获取权限</h2>
+<p>对用户来说，请求获取指定API权限的方法都各不相同。例如，Geolocation API会在你调用<code>getCurrentPosition()</code>时弹出一个确认框给用户。</p>
+<pre><code>navigator.geolocation.getCurrentPosition(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(position)</span> </span>{
+    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'Geolocation permissions granted'</span>);
+    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'Latitude:'</span> + position.coords.latitude);
+    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'Longitude:'</span> + position.coords.longitude);
+});
+</code></pre><p>在调用<code>Notification.requestPermission()</code>方法时也会弹出一个确认框给用户，代码如下：</p>
+<pre><code><span class="hljs-type">Notification</span>.requestPermission(function(<span class="hljs-literal">result</span>) {
+    <span class="hljs-keyword">if</span> (<span class="hljs-literal">result</span> === 'denied') {
+        console.log('<span class="hljs-type">Permission</span> wasn\'t granted. <span class="hljs-type">Allow</span> a retry.');
+        <span class="hljs-keyword">return</span>;
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-literal">result</span> === 'default') {
+        console.log('<span class="hljs-type">The</span> permission request was dismissed.');
+        <span class="hljs-keyword">return</span>;
+    }
+    console.log('<span class="hljs-type">Permission</span> was granted <span class="hljs-keyword">for</span> notifications');
+});
+</code></pre><p>这里想强调的是：Permission API允许你使用一个统一的方法来检测一系列Web API的权限。这带来的巨大优势就是：允许你只给那些没有确认过权限的用户弹出确认框。这将大大提高用户的体验。你可以在你有权限时充分利用这些API打造更棒的体验。</p>
+<p><a href="https://googlechrome.github.io/samples/permissions/">这里有一系列使用样例</a>。</p>
+<h2 id="-">浏览器支持</h2>
+<p>Chrome是以第一个实现这个API的浏览器，Mozilla正在计划提供这个功能，并且Microsoft也对这个API感兴趣。</p>
+<h2 id="-">已知的问题</h2>
+<p>Geolocation API在用户忽略权限确认框后，再次请求不会显示确认框。并且这是Permission状态值为<code>prompt</code>。这显然是不合理的。[crbug.com/476509]</p>
+
+    </div>
+
+    <div class="info">
+        <h1>MZhou&#39;s blog - Taste of life.</h1>
+        <p>
+            <a href="https://github.com/zmmbreeze" target="_blank">zmmbreeze</a> / <a href="https://twitter.com/zhoumm">@zhoumm</a>
+        </p>
+        <p>2015-05-05 21:46</p>
+    </div>
+</div>
+</body>
+</html>
