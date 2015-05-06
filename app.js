@@ -26,7 +26,7 @@ var getMarkdowns = function () {
     var files = fs.readdirSync('.');
     var result = [];
     files.forEach(function (filename) {
-        if (path.extname(filename) === '.md') {
+        if (filename.charAt(0) !== '_' && path.extname(filename) === '.md') {
             var filepath = './' + filename;
             var fileStats = fs.statSync(filepath);
             if (fileStats.isDirectory()) {
