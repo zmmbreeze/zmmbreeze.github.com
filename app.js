@@ -44,10 +44,7 @@ var getMarkdowns = function () {
                 filename: filename,
                 filepath: filepath,
                 destpath: './' + path.basename(filepath, '.md') + '.html',
-                content: markedContent,
-                mtime: moment(fileStats.mtime).format('YYYY-MM-DD HH:mm'),
-                birthtime: moment(fileStats.birthtime).format('YYYY-MM-DD HH:mm'),
-                birthtimeDate: fileStats.birthtime
+                content: markedContent
             });
         }
     });
