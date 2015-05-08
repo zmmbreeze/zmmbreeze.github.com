@@ -1,0 +1,155 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>CSS vs JS动画：谁更快？</title>
+    <link rel="stylesheet" href="./assets/blog.css" />
+    <link rel="stylesheet" href="./assets/entry.css" />
+    <link rel="stylesheet" href="./assets/highlight.css" />
+</head>
+<body>
+<div class="main">
+    <a class="back" href="./">MZhou's blog</a>
+    <div class="entry">
+        <h1 id="css-vs-js-">CSS vs JS动画：谁更快？</h1>
+<blockquote>
+<p>这篇文章翻译自 Julian Shapiro 的 <a href="http://davidwalsh.name/css-js-animation">CSS vs. JS Animation: Which is Faster?</a>。Julian Shapiro 也是 <a href="http://julian.com/research/velocity/">Velocity.js</a> 的创造者。这是一个非常高效、简单易用的JS动画库。他在Web动画方面有很高的造诣。</p>
+</blockquote>
+<p>Javascript 动画怎么可能总是和 CSS transition 一样快，甚至更快呢？到底是什么秘密呢？Adobe 和 Google 是怎么做到让他们的富媒体移动网站的速度和 native app 媲美的？</p>
+<p>这篇文章会一步步告诉你为什么基于 Javascript 的 DOM 动画库（比如 Velocity.js 和 GSAP）能够比 jQuery 和基于 CSS 的动画库更高效。</p>
+<h2 id="jquery">jQuery</h2>
+<p>让我们从基本开始说起： Javascript 和 jQuery 两者不能混为一谈。Javascript 动画很快，而 jQuery 动画很慢。为什么呢？因为尽管 jQuery 异常强大，但是它的设计目标并不是一个高效的动画引擎：</p>
+<ul>
+<li>jQuery 不能避免 <a href="http://wilsonpage.co.uk/preventing-layout-thrashing/">layout thrashing</a> （有人喜欢将其翻译为“布局颠簸”，会导致多余relayout/reflow），因为它的代码不仅仅用于动画，它还用于很多其他场景。</li>
+<li>jQuery的内存消耗较大，经常会触发垃圾回收。而垃圾回收触发时很容易<a href="http://blog.artillery.com/2012/10/browser-garbage-collection-and-framerate.html">让动画卡住</a>。</li>
+<li>jQuery使用了<code>setInterval</code>而不是 <code>reqeustAnimationFrame(RAF)</code>，因为 RAF 会在窗口失去焦点时停止触发，这会导致jQuery的bug。（目前jQuery已经使用了RAF）</li>
+</ul>
+<p>注意 layout thrashing 会导致动画在开始的时候卡顿，垃圾回收的触发会导致动画运行过程中的卡顿，不使用 RAF 则会导致动画帧率低。</p>
+<h2 id="-">实现样例</h2>
+<p>为了避免layout thrashing，我们需要批量访问和更新DOM。</p>
+<pre><code>var currentTop,
+    currentLeft;
+
+/<span class="hljs-keyword">*</span> 有 layout thrashing. <span class="hljs-keyword">*</span>/
+currentTop = element.style.top; /<span class="hljs-keyword">*</span> 访问 <span class="hljs-keyword">*</span>/
+element.style.top = currentTop + 1; /<span class="hljs-keyword">*</span> 更新 <span class="hljs-keyword">*</span>/
+
+currentLeft = element.style.left; /<span class="hljs-keyword">*</span> 访问 <span class="hljs-keyword">*</span>/
+element.style.left = currentLeft + 1; /<span class="hljs-keyword">*</span> 更新 <span class="hljs-keyword">*</span>/
+
+/<span class="hljs-keyword">*</span> 没有 layout thrashing. <span class="hljs-keyword">*</span>/
+currentTop = element.style.top; /<span class="hljs-keyword">*</span> 访问 <span class="hljs-keyword">*</span>/
+currentLeft = element.style.left; /<span class="hljs-keyword">*</span> 访问 <span class="hljs-keyword">*</span>/
+
+element.style.top = currentTop + 1; /<span class="hljs-keyword">*</span> 更新 <span class="hljs-keyword">*</span>/
+element.style.left = currentLeft + 1; /<span class="hljs-keyword">*</span> 更新 <span class="hljs-keyword">*</span>/
+</code></pre><p>在更新操作之后的访问操作会强制浏览器重新计算页面元素的样式（因为要将更新的样式应用上去才能获取正确的值）。这在一般操作下没多大的性能损失，但是放在间隔仅仅16ms的动画中则会导致显著的性能开销。只需要稍微改动下操作的顺序就可以大大提高动画的性能。</p>
+<p>类似地，使用 RAF 也不会让你大量重构代码。让我们来比较下使用 RAF 和使用 setInterval 的区别：</p>
+<pre><code>var startingTop = <span class="hljs-number">0</span>;
+
+/* setInterval: Runs <span class="hljs-keyword">every</span> <span class="hljs-number">16</span>ms <span class="hljs-keyword">to</span> achieve <span class="hljs-number">60</span>fps (<span class="hljs-number">1000</span>ms/<span class="hljs-number">60</span> ~= <span class="hljs-number">16</span>ms). */
+setInterval(function() {
+    /* Since this ticks <span class="hljs-number">60</span> <span class="hljs-keyword">times</span> a <span class="hljs-keyword">second</span>, we divide <span class="hljs-keyword">the</span> top <span class="hljs-keyword">property</span>'s increment <span class="hljs-keyword">of</span> <span class="hljs-number">1</span> unit per <span class="hljs-number">1</span> <span class="hljs-keyword">second</span> <span class="hljs-keyword">by</span> <span class="hljs-number">60.</span> */
+    element.style.top = (startingTop += <span class="hljs-number">1</span>/<span class="hljs-number">60</span>);
+}, <span class="hljs-number">16</span>);
+
+/* requestAnimationFrame: Attempts <span class="hljs-keyword">to</span> <span class="hljs-command">run</span> <span class="hljs-keyword">at</span> <span class="hljs-number">60</span>fps based <span class="hljs-function_start"><span class="hljs-keyword">on</span></span> whether <span class="hljs-keyword">the</span> browser <span class="hljs-keyword">is</span> <span class="hljs-keyword">in</span> an optimal state. */
+function tick () {
+    element.style.top = (startingTop += <span class="hljs-number">1</span>/<span class="hljs-number">60</span>);
+}
+
+window.requestAnimationFrame(tick);
+</code></pre><p>你只需要稍微修改下代码来使用 RAF，就可以让你的动画性能有巨大的提高。</p>
+<h2 id="css-transition">CSS Transition</h2>
+<p>CSS transition 的动画逻辑是由浏览器来执行，所以它的性能能够比 jQuery 动画好。它的优势体现在：</p>
+<ol>
+<li>通过优化 DOM 操作，避免内存消耗来减少卡顿</li>
+<li>使用与 RAF 类似的机制</li>
+<li>强制使用硬件加速 （通过 GPU 来提高动画性能）</li>
+</ol>
+<p>然而实际上Javascript也可以使用这些优化。<a href="http://www.greensock.com/gsap-js/">GSAP</a> 已经做这些优化很久了。<a href="http://velocityjs.org/">Velocity.js</a> 是一个新兴的动画引擎，它不仅仅做了这些优化，甚至走的更远些。我们稍后会谈到这些。</p>
+<p>面对事实，让 Javascript 动画得以媲美 CSS 动画的性能只是我们伟大计划的第一步。第二步才是重头戏，要让 Javascript 动画比 CSS 动画还要快！</p>
+<p>让我们来看看 CSS 动画库的缺陷吧：</p>
+<ul>
+<li>Transition 强制使用了 GPU 的硬件加速。导致浏览器一直处于高负荷运转的状态，这反而会让动画变的卡顿。这在移动浏览器上更为严重。（特别要说明的是，当数据在浏览器的主线程和合成线程之间频繁传输的时候特别消耗性能，故容易导致卡顿。某些 CSS 属性，不会受到影响。Adobe 的<a href="http://blogs.adobe.com/webplatform/2014/03/18/css-animations-and-transitions-performance/">博客</a>谈到过这个问题。</li>
+<li>IE 10以下的浏览器不支持 transition。而目前 IE8 和 IE9 还是<a href="http://thenextweb.com/insider/2014/02/01/ie11-passes-ie10-market-share-firefox-slips-bit-chrome-gains-back-share">很流行</a>的。</li>
+<li>transition 不能完全被 Javascript 控制（只能通过 Javascript 来触发 transition），因为浏览器不知道如何同时让 Javascript 控制动画又同时优化动画的性能。</li>
+</ul>
+<p>反过来说： 基于 Javascript 可以决定什么时候启用硬件加速，它可以支持全版本的 IE，并且它完全可以进行批量动画的优化。</p>
+<blockquote>
+<p>我的建议是：当你只在移动平台上开发，并且动画只是简单的状态切换，那么适合用纯 CSS transition。在这种情况下，transition 是高性能的原生支持方案。它可以让你将动画逻辑放在样式文件里面，而不会让你的页面充斥 Javascript 库。然而如果你在设计很复杂的富客户端界面或者在开发一个有着复杂UI状态的 app。那么我推荐你使用一个动画库，这样你的动画可以保持高效，并且你的工作流也更可控。有一个特别的库做的特别棒，它可以用 Javascript 控制 CSS transition。这就是 <a href="https://github.com/rstacruz/jquery.transit">Transit</a>。</p>
+</blockquote>
+<h2 id="javascript-">Javascript 动画</h2>
+<p>所以 Javascript 可以比 CSS transition 性能更好。但是它到底有多块呢？它快到足够可以构建一个<a href="http://julian.com/research/velocity/demo.html">3D 动画的demo</a>，通常需要用到 WebGL 才能完成。并且它快到足够搭建一个<a href="http://julian.com/research/velocity/playground.html">多媒体小动画</a>，通常需要 Flash 或者 After Effects 才能完成。并且它还快到可以构建一个<a href="http://danielraftery.com/read/Animating-Awesomeness-with-Velocityjs">虚拟世界</a>，通常需要 canvas 才能完成。</p>
+<p>为了更直接的来比较主流动画库的性能，包括 Transit（使用了 CSS transition），让我们打开Velocity的<a href="http://velocityjs.org/">官方文档</a>。</p>
+<p>之前那个问题还在：Javascript 是如何达到高性能的呢？下面是一个列表，列举了基于 Javascript 的动画库能做的事情：</p>
+<ul>
+<li>同步DOM -&gt; 在整个动画链中微调堆栈以达到最小的layout thrashing。</li>
+<li>缓存链式操作中的属性值，这样可以最小化DOM的查询操作（这就是高性能 DOM 动画的阿喀琉斯之踵）</li>
+<li>在同一个跨同层元素的调用中缓存单位转化比率（例如px转换成%、em等等单位）</li>
+<li>忽略那些变动小到根本看不出来的DOM更新</li>
+</ul>
+<p>让我们重新温习下之前学到的关于layout thrashing的知识点。Velocity.js 运用了这些最佳实践，缓存了动画结束时的属性值，在紧接的下一次动画开始时使用。这样可以避免重新查询动画的起始属性值。</p>
+<pre><code>$element
+    <span class="hljs-comment">/* Slide the element down into view. */</span>
+    .velocity({ <span class="hljs-string">opacity:</span> <span class="hljs-number">1</span>, <span class="hljs-string">top:</span> <span class="hljs-string">"50%"</span> })
+    <span class="hljs-comment">/* After a delay of 1000ms, slide the element out of view. */</span>
+    .velocity({ <span class="hljs-string">opacity:</span> <span class="hljs-number">0</span>, <span class="hljs-string">top:</span> <span class="hljs-string">"-50%"</span> }, { <span class="hljs-string">delay:</span> <span class="hljs-number">1000</span> });
+</code></pre><p>在上面的样例中，第二次调用 Velocity 时已经知道了 opacity 的起始值为 1，top 的值为 50%。</p>
+<p>浏览器也可以使用与此类似的优化，但是要做这些事情太过激进，使用场景也会受到限制，开发者就有可能会写出有bug的动画代码。jQuery就是因为这个原因没有使用RAF（如上所说），浏览器永远不会强行实施可能打破规范或者可能偏离期望行为的优化。</p>
+<p>最后，让我们来比较下两个Javascript框架（velocity.js 和 GSAP）。</p>
+<ul>
+<li>GASP 是一个快速且功能丰富的动画平台。Velocity则更为轻量级，它大大地改善了UI动画性能和工作流程。</li>
+<li>GSAP 需要<a href="http://www.greensock.com/licensing/">付费</a>才能用于商业产品。Velocity 是完全免费的，它使用了自由度极高的 MIT 协议。</li>
+<li>性能方面，两者几乎相当，很难区分胜负。</li>
+</ul>
+<blockquote>
+<p>我个人推荐在你需要如下功能时使用 GSAP：精确控制时间（例如 remapping，暂停/继续/跳过），或者需要动作（例如：贝赛尔曲线路径），又或者复杂的动画组合/队列。这些特性对游戏开发或者复杂的应用很重要，但是对普通的 web app 的 UI 不太需要。</p>
+</blockquote>
+<h2 id="velocity-js">Velocity.js</h2>
+<p>之前提到了 GSAP 有着丰富的功能，但这不代表 Velocity 的功能简单。相反的，Velocity 在 zip 压缩之后只有 7kb，它不仅仅实现了 jQuery animate 方法的所有功能，还包含了 颜色、transforms、loop、easings、class 动画和滚动动画等功能。</p>
+<p>简单的说就是 Velocity 包含了 jQuery、 jQuery UI 和 CSS transition 的功能。</p>
+<p>更进一步从易用性的角度来讲，Velocity 使用了 jQuery 的<code>$.queue()</code> 方法，因此可以无缝过渡到 jQuery 的<code>$.animate()</code>、<code>$.fade()</code>和<code>$.delay()</code>方法。并且 Velocity 的语法和<code>$.animate()</code>一摸一样，所以我们根本不需要修改页面的现有代码。</p>
+<p>让我们快速过一下 Velocity.js 的例子：</p>
+<pre><code>$element
+    .delay(<span class="hljs-number">1000</span>)
+    /* <span class="hljs-type">Use</span> <span class="hljs-type">Velocity</span> to animate the element's top property over a duration <span class="hljs-keyword">of</span> <span class="hljs-number">2000</span>ms. */
+    .velocity({ top: <span class="hljs-string">"50%"</span> }, <span class="hljs-number">2000</span>)
+    /* <span class="hljs-type">Use</span> a standard jQuery <span class="hljs-keyword">method</span> to fade the element <span class="hljs-keyword">out</span> once <span class="hljs-type">Velocity</span> <span class="hljs-keyword">is</span> done animating top. */
+    .fadeOut(<span class="hljs-number">1000</span>);
+</code></pre><p>如下是一个高级用法：滚动网页到当前元素并且旋转元素。这样的动画只需要简单的几行代码：</p>
+<pre><code>$<span class="hljs-tag">element</span>
+    <span class="hljs-comment">/* Scroll the browser to the top of this element over a duration of 1000ms. */</span>
+    <span class="hljs-class">.velocity</span>("<span class="hljs-tag">scroll</span>", 1000)
+    <span class="hljs-comment">/* Then rotate the element around its Y axis by 360 degrees. */</span>
+    <span class="hljs-class">.velocity</span>(<span class="hljs-rules">{ <span class="hljs-rule"><span class="hljs-attribute">rotateY</span>:<span class="hljs-value"> <span class="hljs-string">"360deg"</span> }, <span class="hljs-number">1000</span>)</span></span>;</span>
+</code></pre><h2 id="-">总结</h2>
+<p>Velocity 的目标是成为 DOM 动画领域性能最好易用性最高的库。这篇文章主要关注了性能方面。易用性方面可以前往 <a href="http://velocityjs.org/">VelocityJS.org</a> 了解。</p>
+<p>在结束之前，请记住一个高性能的 UI 绝不仅仅是选择一个正确的动画库。页面上的其他代码也需要优化。可以看看Google那些非常棒的演讲：</p>
+<ul>
+<li><a href="http://www.youtube.com/watch?v=n8ep4leoN9A">Jank Free</a></li>
+<li><a href="http://www.youtube.com/watch?v=cmZqLzPy0XE">Rendering Without Lumps</a></li>
+<li><a href="http://www.devoxx.com/display/DV12/Faster+Websites++Crash+Course+on+Frontend+Performance">Faster Websites</a></li>
+</ul>
+
+    </div>
+
+    <div class="info">
+        <h1>MZhou&#39;s blog - Taste of life.</h1>
+        <p>
+            <a href="https://github.com/zmmbreeze" target="_blank">zmmbreeze</a> / <a href="https://twitter.com/zhoumm">@zhoumm</a>
+        </p>
+    </div>
+
+    <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-36422454-1', 'auto');
+    ga('send', 'pageview');
+    </script>
+</div>
+</body>
+</html>

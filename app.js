@@ -86,9 +86,11 @@ fs.writeFileSync(
 console.log('Write: index.html');
 
 // generate font
+/*
 var fontspider = new FontSpider('./*.html').then(function () {
     console.log('Minify fonts done.');
 });
+*/
 
 
 // static server
