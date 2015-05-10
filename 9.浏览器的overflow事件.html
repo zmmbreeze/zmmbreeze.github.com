@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8"/>
     <title>浏览器的overflow事件</title>
+    <meta name ="viewport" content ="initial-scale=1, user-scalable=no, width=device-width">
     <link rel="stylesheet" href="./assets/blog.css" />
     <link rel="stylesheet" href="./assets/entry.css" />
     <link rel="stylesheet" href="./assets/highlight.css" />
@@ -59,6 +60,18 @@
 </code></pre><p>因为是异步的，所以一定要确保判断结果的动作是在执行过overflow事件回调之后。一个比较简单的方法是使用setTimeout延迟执行。为了保证执行顺序，时间就一定要设置长一点（250ms）。但是这样响应太慢了。幸运地是在Firefox中scroll事件是在overflow事件之后触发的，所以改为在scroll事件的回调函数中做判断。</p>
 <p>如果你有更好的检测方法，请一定告知~ <a href="https://github.com/zmmbreeze/useOverflowEvent">Github</a></p>
 
+    </div>
+
+    <div class="important">
+        <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-4890499698922298"
+             data-ad-slot="1947364368"
+             data-ad-format="auto"></ins>
+        <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
     </div>
 
     <div class="info">
