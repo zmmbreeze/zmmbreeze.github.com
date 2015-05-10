@@ -15,6 +15,7 @@
     "marked": "~0.3.3",
     "moment": "~2.10.2",
     "mustache": "~2.0.0",
-    "node-static": "~0.7.6"
+    "node-static": "~0.7.6",
+    "optimist": "^0.6.1"
   }
 }
