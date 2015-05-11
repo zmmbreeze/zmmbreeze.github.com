@@ -9,10 +9,10 @@ var highlight = require('highlight.js');
 var cheerio = require('cheerio');
 var optimist = require('optimist');
 
-var noFont = optimist.options('nf', {
-        alias: 'no-font',
+var font = optimist.options('f', {
+        alias: 'font',
         default: false
-    }).argv;
+    }).argv.f;
 
 var blogTitle = 'MZhou\'s blog - Taste of life.';
 var blogTemplate = fs.readFileSync('./template/blog.mustache', {
@@ -92,7 +92,7 @@ fs.writeFileSync(
 console.log('Write: index.html');
 
 // generate font
-if (!noFont) {
+if (font) {
     var fontspider = new FontSpider('./*.html').then(function () {
         console.log('Minify fonts done.');
     });
