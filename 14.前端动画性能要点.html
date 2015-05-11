@@ -1,0 +1,100 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>CSS动画的性能优化</title>
+    <meta name ="viewport" content ="initial-scale=1, user-scalable=no, width=device-width">
+    <link rel="stylesheet" href="./assets/blog.css" />
+    <link rel="stylesheet" href="./assets/entry.css" />
+    <link rel="stylesheet" href="./assets/highlight.css" />
+</head>
+<body>
+<div class="main">
+    <a class="back" href="./">MZhou's blog</a>
+    <div class="entry">
+        <h1 id="css-">CSS动画的性能优化</h1>
+<p>在Web页面中使用动画效果已经不是什么稀奇的事情了。但凡优秀的UI界面都会有一些点缀用的动画效果。举个例子，<a href="https://medium.com/@michaelvillar/improve-the-payment-experience-with-animations-3d1b0a9b810e">Stripe Checkout小组</a>通过UI动画效果来增强支付体验。</p>
+<p><img src="./imgs/14/1.gif" alt=""></p>
+<p>图片来自@michaelvillar的<a href="https://medium.com/@michaelvillar/improve-the-payment-experience-with-animations-3d1b0a9b810e">Improve the payment experience with animations</a></p>
+<p>可见通过UI动画来优化用户体验是一件值得去做的事情。从CSS3开始，W3C开始推出了CSS transition和animation，目前他们都处于Working Draft阶段。如果你需要的是简单的状态切换的动画，且只针对移动端来开发，那么我推荐你使用CSS动画来实现。使用CSS动画可以大大减少网页上实现动画效果的工作量，也可以避免引入大体积的JS动画库代码。</p>
+<p>本文主要讨论的不是如何实现CSS动画，而是如果实现一个高性能的CSS动画效果。</p>
+<h2 id="-">浏览器的“硬件加速”</h2>
+<pre><code><span class="hljs-tag">div</span> <span class="hljs-rules">{
+    <span class="hljs-rule"><span class="hljs-attribute">transform</span>:<span class="hljs-value"> <span class="hljs-function">translate3d</span>(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>)</span></span>;
+}</span>
+</code></pre><p>在移动端，我们经常用到如上的CSS代码实现所谓的“硬件加速”，来提高动画的流畅度。在部分情况下，我们的CSS动画的确变的更加流畅。但这个方法并不是万能药。当页面中加速的元素越来越多时，网页的性能便会下降。为了更详细的了解原因，我们有必要了解下浏览器的内部机制。</p>
+<p>现代浏览器大都利用了GPU来加速<a href="http://blogs.msdn.com/b/ie/archive/2010/09/10/the-architecture-of-full-hardware-acceleration-of-all-web-page-content.aspx">网页渲染</a>。GPU是专用于图形渲染的芯片，它擅长做如下事情：</p>
+<ol>
+<li>绘制位图到屏幕上</li>
+<li>对图片进行处理，例如：修改位置、旋转和缩放等等</li>
+</ol>
+<p>知道GPU擅长什么之后，让我们以Chrome为例子分析下如何利用GPU来加速页面渲染的。众所周知，Chrome的特性之一是多进程，这样任何一个页面崩溃也不会影响到其他页面。每个页面标签都有一个独立的Render进程。Render进程中包含了主线程和合成线程。主线程负责：</p>
+<ul>
+<li>Javascript的执行</li>
+<li>CSS样式计算</li>
+<li>计算Layout</li>
+<li>将页面元素绘制成位图（paint）</li>
+<li>发送位图给合成线程</li>
+</ul>
+<p>合成线程则主要负责：</p>
+<ul>
+<li>将位图发送给GPU</li>
+<li>计算页面的可见部分和即将可见部分（滚动）</li>
+<li>通知GPU绘制位图到屏幕上（draw）</li>
+</ul>
+<p>因为现在页面中通常都有很重的Javascript和CSS，所以主线程几乎一直是满负荷运作。如果主线程一直在运行，那么页面就会卡住了。至此我们可以得到一个大概的浏览器线程模型：</p>
+<p><img src="./imgs/14/2.png" alt=""></p>
+<p>我们可以将页面绘制的过程分为三个部分：layout、paint和合成。layout负责计算DOM元素的布局关系，paint负责将DOM元素绘制成位图，合成则负责将位图发送给GPU绘制到屏幕上（如果有transform、opacity等属性则通知GPU做处理）。</p>
+<p>那么所谓的<code>translate3d</code>硬件加速到底做了什么事情呢？在Chrome中当某个DOM元素开启硬件加速之后，浏览器会为此元素单独创建一个“层”。当有单独的层之后，此元素的repaint操作将只需要更新自己，不用影响到别人。你可以将其理解为局部更新。所以开启了硬件加速的动画会变得流畅很多。</p>
+<p>每个层都有自己对应上下文对象、位图，而创建上下文对象和更新位图又需要消耗内存。故当一个页面上有太多层需要更新的时候，页面往往会崩溃掉。你可以在Chrome中启用<code>chrome://flags/#composited-layer-borders</code>，然后在开发工具中勾选<code>Show composited layer borders</code>。这样就可以在页面中看到层了。可以使用下面这个DEMO，做测试：</p>
+<p><a class="jsbin-embed" href="http://jsbin.com/motabey/2/embed?output">DEMO</a><script src="http://static.jsbin.com/js/embed.js"></script></p>
+<h2 id="-">优化要点</h2>
+<p>我们已经知道了浏览器的大概机制，现在让我们看看该从哪几个点来入手优化我们的动画效果。</p>
+<p>上面已经说道主线程经常是满负荷运作的，所以首先我们需要做的是给主线程减负。尽量把工作移动到合成线程（GPU）去完成。layout和paint操作都在主线程中完成，故我们需要减少动画中这两种操作。</p>
+<p>很幸运前人已经总结了哪些CSS属性会触发layout和paint，详见<a href="http://csstriggers.com/">CSS triggers</a>。我们需要尽量使用transform、opacity这类不触发layout和paint操作的CSS属性。或许你已经在不知不觉中使用了这种优化，比如使用<code>transform:translate(10px, 10px);</code>替代<code>position:absolute;top:10px;left:10px;</code>。</p>
+<p>GPU虽然擅长处理图像，但是它也有瓶颈。连接CPU和GPU之间的带宽是有限的，如果一次更新的层太多，则很容易就达到GPU的瓶颈，影响到动画的流畅度。所以我们需要控制层的数量和层paint的次数。</p>
+<p>控制层的数量可以理解，因为层的创建和更新都会消耗内存。而控制层paint的次数，是为了减少位图更新的次数。每次位图更新，合成线程就需要提交新的位图给GPU。频繁地更新位图也会拖慢GPU的效率。</p>
+<p>或许你也可能已经在不知不觉中使用了这项优化。通常在移动端做无限滚动列表的时候，我们会复用移除可视区域的列表项。只更新列表项中的数据，然后作为新增的列表项进入用户的视野。这样便可以固定层的数量。</p>
+<p>虽然限制很多、能使用的样式比较少，但是只要开动我们的大脑还是可以冒出很多令人惊讶的idea的。比如这个<a href="http://ariya.ofilabs.com/2014/02/tricks-for-gpu-composited-css.html">双层叠加</a>模拟颜色变化的方案。</p>
+<h2 id="-">总结</h2>
+<p>为了得到更流畅的CSS动画效果，你需要尽量做到如下条件：</p>
+<ol>
+<li>动画中尽量少使用能触发layout和paint的CSS属性，使用更低耗的<code>transform</code>、<code>opacity</code>等属性</li>
+<li>尽量减少或者固定层的数量，不要在动画过程中创建层</li>
+<li>尽量减少层的更新（paint）次数</li>
+</ol>
+<p>当然这些标准不是一定的，你需要做的是了解浏览器的机制，针对实际项目的情况来取舍。同时灵活运用手头的工具检查页面的性能，例如Chrome、<a href="https://github.com/axemclion/browser-perf">Browser-perf</a>等等。</p>
+
+    </div>
+
+    <div class="important">
+        <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-4890499698922298"
+             data-ad-slot="1947364368"
+             data-ad-format="auto"></ins>
+        <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+    </div>
+
+    <div class="info">
+        <h1>MZhou&#39;s blog - Taste of life.</h1>
+        <p>
+            <a href="https://github.com/zmmbreeze" target="_blank">zmmbreeze</a> / <a href="https://twitter.com/zhoumm">@zhoumm</a>
+        </p>
+    </div>
+
+    <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-36422454-1', 'auto');
+    ga('send', 'pageview');
+    </script>
+</div>
+</body>
+</html>
