@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Composited Layer border test</title>
+    <style>
+    .box {
+        float: left;
+        margin-right: 1em;
+        width: 100px;
+        height: 100px;
+        opacity: 1;
+        text-align: center;
+        word-wrap: break-word;
+        background-color: #096;
+    }
+    .acc1 {
+        transform: translate3d(0, 0, 0);
+    }
+    .acc2 {
+        transition: all 10s;
+    }
+    .acc3 {
+        opacity: 0;
+        transition: all 10s;
+    }
+    .acc4 {
+        transform: translate(0, 0);
+    }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <p>没有合成层</p>
+    </div>
+
+    <div class="box acc4">
+        <p>transform:translate(0,0) <br/> 有合成层</p>
+    </div>
+
+    <div class="box acc1">
+        <p>transform:translate3d(0, 0, 0); <br/> 有合成层</p>
+    </div>
+
+    <div class="box acc2">
+        <p>transition + background-color <br/> 没有合成层</p>
+    </div>
+
+    <div class="box acc3">
+        <p>transition + opacity <br/> 有合成层</p>
+    </div>
+
+    <script>
+    setTimeout(function () {
+        document.querySelector('.acc2').style.backgroundColor = 'red';
+        document.querySelector('.acc3').style.opacity = 1;
+    }, 2000);
+    </script>
+</body>
+</html>
