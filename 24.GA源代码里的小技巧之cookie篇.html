@@ -1,0 +1,221 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>GA源代码里的小技巧之cookie篇</title>
+    <meta name ="viewport" content ="initial-scale=1, user-scalable=no, width=device-width">
+    <link rel="stylesheet" href="./assets/blog.css" />
+    <link rel="stylesheet" href="./assets/entry.css" />
+    <link rel="stylesheet" href="./assets/highlight.css" />
+</head>
+<body>
+<div class="main">
+    <a class="back" href="./">MZhou's blog</a>
+    <div class="entry">
+        <h1 id="ga-cookie-">GA源代码里的小技巧之cookie篇</h1>
+<blockquote>
+<p>作者前段时间在做类似Google Analytics（以下简称GA）的第三方监控脚本。所以对GA的前端代码做过调研，对GA的压缩后代码做了一定程度上的<a href="https://gist.github.com/zmmbreeze/ddb4b3a619187b923dc2c009b4323a42">人肉美化</a>。这里美化的是<a href="https://www.google-analytics.com/analytics.js">analytics.js</a>的j41版本，本文提到的小技巧也是基于这个版本的js。</p>
+</blockquote>
+<p>cookie的本质是存储在浏览器端的一段简单数据（多个键值对），浏览器会从服务器接受或者发送给服务器cookie。这样便可以为没有状态的HTTP协议提供了记录状态信息的方法，知道多个不同的HTTP请求是否来自同一个浏览器。</p>
+<p>在浏览器中cookie是支持范围最广的存储数据的手段了，前端工程师一般都曾经或多或少的使用过cookie来存储数据或变量。浏览器提供了<code>document.cookie</code>这个接口来增删改查cookie。但是只能一次设置一个cookie。使用方法如下：</p>
+<pre><code class="lang-javascript"><span class="hljs-comment">// 设置名为key的cookie，值为value</span>
+<span class="hljs-built_in">document</span>.cookie = <span class="hljs-string">'key=value'</span>;
+</code></pre>
+<p>代码中省略了其他可选配置，具体使用方法可以参考<a href="https://developer.mozilla.org/zh-CN/docs/Web/API/Document/cookie">MDN文档</a>。通过<code>domain</code>和<code>path</code>参数，可以将cookie设置在不同的域名或者路径下，例如：</p>
+<pre><code class="lang-javascript">// 设置名为key的cookie，值为value
+document.<span class="hljs-variable">cookie =</span> '<span class="hljs-variable">A=</span><span class="hljs-number">1</span>;<span class="hljs-variable">path=</span>/;<span class="hljs-variable">domain=</span><span class="hljs-built_in">map</span>.baidu.com;';
+</code></pre>
+<p>上面的代码在域名<code>map.baidu.com</code>下的根路径（<code>/</code>）设置了cookie A的值为<code>1</code>。我们可以通过<code>document.cookie</code>来获取当前域名和路径下的所有cookie。当我们访问<code>http://map.baidu.com</code>页面时，执行<code>document.cookie</code>获得的结果是<code>A=1</code>。</p>
+<p>大家知道域名是有父域名和子域名的区别的，键名相同的两个cookie可以分别设置在父子域名上。例如如下代码：</p>
+<pre><code class="lang-javascript">document.<span class="hljs-variable">cookie =</span> '<span class="hljs-variable">A=</span><span class="hljs-number">1</span>;<span class="hljs-variable">path=</span>/;<span class="hljs-variable">domain=</span>.example.com;';
+document.<span class="hljs-variable">cookie =</span> '<span class="hljs-variable">A=</span><span class="hljs-number">2</span>;<span class="hljs-variable">path=</span>/;<span class="hljs-variable">domain=</span>a.example.com;';
+</code></pre>
+<blockquote>
+<p>顺带提到一个冷门的知识点：以<code>.</code>开头的域名表示cookie设置在此域名及其子域上，否则不适用于其子域名。不过从<a href="http://www.ietf.org/rfc/rfc2965.txt">RFC 2965</a>标准开始浏览器便会自动为domain属性值自动添加一个<code>.</code>前缀，所以在设置<code>domain</code>时加不加<code>.</code>前缀已经没有区别了。但是为了兼容一些旧浏览还是加<code>.</code>为好。另外如果不设置<code>domain</code>浏览器会默认用当前页面的域名，这时浏览器不会自动添加<code>.</code>前缀，自然也就不会包含子域了。</p>
+</blockquote>
+<p>在<code>.example.com</code>和<code>a.example.com</code>域名下面分别设置了<code>A=1</code>和<code>A=2</code>两个cookie。此时我们在<code>http://a.example.com</code>页面下执行<code>document.cookie</code>得到的结果是：<code>A=1;A=2</code>。如下图：</p>
+<p><img src="https://cloud.githubusercontent.com/assets/249872/18791619/0fe6206c-81e6-11e6-99c3-ab043142e750.png" alt="2"></p>
+<p>开发者是没办法从结果中知道这个cookie是设置在哪个域名上的。同样这个情况也适用于不同的父子路径上。</p>
+<p>这在一般情况下对开发者不会有影响，但是对于GA来说确实致命的。GA会在当前网站域名下面设置一个全局唯一的cookie <code>_ga</code>，用于标志相同的用户。现在大型的公司都会分不同的网站域名，例如：<code>baidu.com</code>和<code>ditu.baidu.com</code>。假设百度使用了GA～ 那么GA会分别在两个域名下设置不同的<code>_ga</code> cookie值，这样在<code>baidu.com</code>下GA便会拿到两个<code>_ga</code>值。不知道该用哪个，傻傻分不清楚。</p>
+<p>为了解决这个问题，GA在cookie的值上面做文章。可以看到冲突只会发生在父子域名和父子路径上。因为cookie本身的特殊性：所有http请求会带着该域名下的所有cookie。如果cookie值太长太多会消耗太多带宽。GA通过计算域名和路径的“长度”来唯一标示这个cookie所设置在的域名和路径。计算“长度”的方法如下：</p>
+<pre><code class="lang-javascript">/**
+ * normalize <span class="hljs-built_in">domain</span>.
+ * remove the first <span class="hljs-string">'.'</span> <span class="hljs-keyword">if</span> exist.
+ * @<span class="hljs-keyword">param {</span>string<span class="hljs-keyword">}</span> <span class="hljs-built_in">domain</span> <span class="hljs-built_in">domain</span> <span class="hljs-constant">String</span>
+ * @<span class="hljs-keyword">return {</span>string<span class="hljs-keyword">}</span> normalized <span class="hljs-built_in">domain</span>
+ */
+var normalizeDomain = function <span class="hljs-keyword">(domain) {</span>
+    return <span class="hljs-built_in">domain</span>.indexOf(<span class="hljs-string">'.'</span>) === <span class="hljs-number">0</span> ? <span class="hljs-built_in">domain</span>.substr(<span class="hljs-number">1</span>) : <span class="hljs-built_in">domain</span>;
+<span class="hljs-keyword">}</span>;
+
+/**
+ * get count of <span class="hljs-built_in">domain</span>.
+ * getDomainCount(<span class="hljs-string">'qq.com'</span>) === <span class="hljs-number">2</span>
+ * getDomainCount(<span class="hljs-string">'.qq.com'</span>) === <span class="hljs-number">2</span>
+ * getDomainCount(<span class="hljs-string">'b.qq.com'</span>) === <span class="hljs-number">3</span>
+ * getDomainCount(<span class="hljs-string">'e.qidian.qq.com'</span>) === <span class="hljs-number">4</span>
+ *
+ * @<span class="hljs-keyword">param {</span>string<span class="hljs-keyword">}</span> <span class="hljs-built_in">domain</span> <span class="hljs-built_in">domain</span> <span class="hljs-constant">String</span>
+ * @<span class="hljs-keyword">return {</span>string<span class="hljs-keyword">}</span> normalized <span class="hljs-built_in">domain</span>
+ */
+var getDomainCount = function <span class="hljs-keyword">(domain) {</span>
+    return normalizeDomain(<span class="hljs-built_in">domain</span>).split(<span class="hljs-string">'.'</span>).length;
+<span class="hljs-keyword">}</span>;
+
+/**
+ * normalize <span class="hljs-built_in">path</span>
+ * normalizePath(<span class="hljs-string">''</span>) === <span class="hljs-string">'/'</span>
+ * normalizePath(<span class="hljs-string">'/'</span>) === <span class="hljs-string">'/'</span>
+ * normalizePath(<span class="hljs-string">'/ping'</span>) === <span class="hljs-string">'/ping'</span>
+ * normalizePath(<span class="hljs-string">'/ping/pv'</span>) === <span class="hljs-string">'/ping/pv'</span>
+ * normalizePath(<span class="hljs-string">'ping/pv'</span>) === <span class="hljs-string">'/ping/pv'</span>
+ * normalizePath(<span class="hljs-string">'ping/pv/'</span>) === <span class="hljs-string">'/ping/pv'</span>
+ *
+ * @<span class="hljs-keyword">param {</span>string<span class="hljs-keyword">}</span> <span class="hljs-built_in">path</span> <span class="hljs-built_in">path</span>
+ * @<span class="hljs-keyword">return {</span>string<span class="hljs-keyword">}</span> <span class="hljs-built_in">path</span>
+ */
+var normalizePath = function <span class="hljs-keyword">(path) {</span>
+    <span class="hljs-keyword">if</span> (!<span class="hljs-keyword">path) {</span>
+        return <span class="hljs-string">'/'</span>;
+    <span class="hljs-keyword">}</span>
+
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">path</span>.length &gt; <span class="hljs-number">1</span> &amp;&amp; <span class="hljs-built_in">path</span>.lastIndexOf(<span class="hljs-string">'/'</span>) === <span class="hljs-built_in">path</span>.length - <span class="hljs-number">1</span><span class="hljs-keyword">) {</span>
+        // remove last <span class="hljs-string">'/'</span>
+        <span class="hljs-built_in">path</span> = <span class="hljs-built_in">path</span>.substr(<span class="hljs-number">0</span>, <span class="hljs-built_in">path</span>.length - <span class="hljs-number">1</span>);
+    <span class="hljs-keyword">}</span>
+
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">path</span>.indexOf(<span class="hljs-string">'/'</span>) !== <span class="hljs-number">0</span><span class="hljs-keyword">) {</span>
+        // fill up first <span class="hljs-string">'/'</span>
+        <span class="hljs-built_in">path</span> = <span class="hljs-string">'/'</span> + <span class="hljs-built_in">path</span>;
+    <span class="hljs-keyword">}</span>
+
+    return <span class="hljs-built_in">path</span>;
+<span class="hljs-keyword">}</span>;
+
+/**
+ * get count of <span class="hljs-built_in">path</span>
+ * getPathCount(<span class="hljs-string">''</span>) === <span class="hljs-number">1</span>
+ * getPathCount(<span class="hljs-string">'/'</span>) === <span class="hljs-number">1</span>
+ * getPathCount(<span class="hljs-string">'/ping'</span>) === <span class="hljs-number">2</span>
+ * getPathCount(<span class="hljs-string">'/ping/pv'</span>) === <span class="hljs-number">3</span>
+ * getPathCount(<span class="hljs-string">'ping/pv'</span>) === <span class="hljs-number">3</span>
+ * getPathCount(<span class="hljs-string">'ping/pv/'</span>) === <span class="hljs-number">3</span>
+ *
+ * @<span class="hljs-keyword">param {</span>string<span class="hljs-keyword">}</span> <span class="hljs-built_in">path</span> <span class="hljs-built_in">path</span>
+ * @<span class="hljs-keyword">return {</span>number<span class="hljs-keyword">}</span> count of <span class="hljs-built_in">path</span>
+ */
+var getPathCount = function <span class="hljs-keyword">(path) {</span>
+    <span class="hljs-built_in">path</span> = normalizePath(<span class="hljs-built_in">path</span>);
+    return <span class="hljs-built_in">path</span> === <span class="hljs-string">'/'</span> ? <span class="hljs-number">1</span> : <span class="hljs-built_in">path</span>.split(<span class="hljs-string">'/'</span>).length;
+<span class="hljs-keyword">}</span>;
+
+/**
+ * <span class="hljs-constant">Get</span> <span class="hljs-built_in">domain</span> <span class="hljs-keyword">and</span> <span class="hljs-built_in">path</span> count string.
+ *      domainCount + <span class="hljs-string">'-'</span> + pathCount + <span class="hljs-string">'$'</span>
+ *
+ * @<span class="hljs-keyword">param {</span><span class="hljs-constant">Window</span>=<span class="hljs-keyword">}</span> win window <span class="hljs-literal">context</span>.
+ * @<span class="hljs-keyword">param {</span>string=<span class="hljs-keyword">}</span> <span class="hljs-built_in">domain</span> cookie <span class="hljs-built_in">domain</span>.
+ * @<span class="hljs-keyword">param {</span>string=<span class="hljs-keyword">}</span> <span class="hljs-built_in">path</span> cookie <span class="hljs-built_in">path</span>.
+ * @<span class="hljs-keyword">return {</span>string<span class="hljs-keyword">}</span> count string.
+ */
+var getDomainAndPathCount = function (win, <span class="hljs-built_in">domain</span>, <span class="hljs-keyword">path) {</span>
+    win = win || window;
+
+    var location = win.location;
+    var pathCount = getPathCount(<span class="hljs-built_in">path</span> != null ? <span class="hljs-built_in">path</span> : location.pathname);
+    var domainCount = getDomainCount(<span class="hljs-built_in">domain</span> != null ? <span class="hljs-built_in">domain</span> : location.<span class="hljs-built_in">hostname</span>);
+    return domainCount + (pathCount &gt; <span class="hljs-number">1</span> ? <span class="hljs-string">'-'</span> + pathCount : <span class="hljs-string">''</span>) + <span class="hljs-string">'-'</span>;
+<span class="hljs-keyword">}</span>;
+</code></pre>
+<p>GA在设置cookie时加上<code>domain</code>和<code>path</code>的长度前缀，然后在取出cookie时遍历所有的名字相同的cookie找到指定域名和路径下的cookie。示例代码如下：</p>
+<pre><code class="lang-javascript"><span class="hljs-comment">/**
+ * Set cookie.
+ *<span class="hljs-phpdoc"> @param</span> {string} key cookie name.
+ *<span class="hljs-phpdoc"> @param</span> {string|number} value cookie value.
+ *<span class="hljs-phpdoc"> @param</span> {Window=} win window context.
+ *<span class="hljs-phpdoc"> @param</span> {number=} expires cookie expired time in milliseconds.
+ *<span class="hljs-phpdoc"> @param</span> {string=} domain cookie domain.
+ *<span class="hljs-phpdoc"> @param</span> {string=} path cookie path.
+ *<span class="hljs-phpdoc"> @return</span> {boolean} success or not.
+ */</span>
+<span class="hljs-keyword">var</span> setCookie = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">(key, value, win, expires, domain, path)</span> </span>{
+    <span class="hljs-keyword">var</span> domainAndPathCount = getDomainAndPathCount(win, domain, path);
+    value = value + <span class="hljs-string">''</span>;
+    <span class="hljs-keyword">return</span> setCookieRaw(key, domainAndPathCount + value.replace(/\-/g, <span class="hljs-string">'%2d'</span>), win, expires, domain, path);
+};
+<span class="hljs-comment">/**
+ * Get cookie value.
+ *
+ *<span class="hljs-phpdoc"> @param</span> {string} key key name.
+ *<span class="hljs-phpdoc"> @param</span> {Window=} win window context.
+ *<span class="hljs-phpdoc"> @param</span> {string=} domain cookie domain.
+ *<span class="hljs-phpdoc"> @param</span> {string=} path cookie path.
+ *<span class="hljs-phpdoc"> @return</span> {string} cookie value.
+ */</span>
+<span class="hljs-keyword">var</span> getCookie = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">(key, win, domain, path)</span> </span>{
+    <span class="hljs-keyword">var</span> results = getCookieRaw(key, win);
+    <span class="hljs-keyword">var</span> domainAndPathCount = getDomainAndPathCount(win, domain, path);
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; results.length; i++) {
+        <span class="hljs-keyword">var</span> r = results[i];
+        <span class="hljs-keyword">if</span> (r.indexOf(domainAndPathCount) === <span class="hljs-number">0</span>) {
+            <span class="hljs-keyword">return</span> r.slice(domainAndPathCount.length).replace(/%<span class="hljs-number">2</span>d/g, <span class="hljs-string">'-'</span>);
+        }
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-string">''</span>;
+};
+</code></pre>
+<p>魔鬼👹藏于细节。GA对细节的追求并没有止步于此。cookie名<code>_ga</code>虽然一般很少有开发者会用到，但是不怕一万就怕万一。如果cookie名<code>_ga</code>冲突了并被改写成了别的值，那么GA很可能会发送一个不符合要求的值过去。这对服务器端解析也非常不利。</p>
+<p>GA在cookie的值之前又加了前缀<code>GA1.</code>，下次使用这个cookie时都会检查是否带有<code>GA1.</code>前缀。如果不存在前缀则直接覆盖生成新的，如果存在则继续复用原cookie值。</p>
+<p>除了防止<code>_ga</code>被开发者覆盖之外，猜想还有一个作用，就是“版本号”。多个GA版本之间如果<code>_ga</code>的cookie值生成算法不一样需要特殊处理，那么可以依据<code>GA1.</code>前缀来判断应该是哪个版本，采取正确的操作。</p>
+<p>总结下<code>_ga</code> cookie值的格式如下：</p>
+<pre><code class="lang-javascript">// GA<span class="hljs-list">{version}</span>.<span class="hljs-list">{domainCount}</span>[-<span class="hljs-list">{pathCount}</span>].<span class="hljs-list">{randomNumber}</span>.<span class="hljs-list">{time}</span>
+// path是<span class="hljs-string">'/'</span>时
+document.cookie = <span class="hljs-string">'_ga=GA1.3.494346849.1446193077'</span>;
+// 没有path时
+document.cookie = <span class="hljs-string">'_ga=GA1.3-2.494346849.1446193077'</span>;
+</code></pre>
+<blockquote>
+<p>细微之处见真章:+1:</p>
+</blockquote>
+<p>参考文档：</p>
+<ol>
+<li><a href="https://tools.ietf.org/html/rfc2109">RFC 2109</a></li>
+<li><a href="http://www.ietf.org/rfc/rfc2965.txt">RFC 2965</a></li>
+<li><a href="https://tools.ietf.org/html/rfc6265">RFC 6265</a></li>
+<li><a href="http://stackoverflow.com/questions/9618217/what-does-the-dot-prefix-in-the-cookie-domain-mean">What does the dot prefix in the cookie domain mean?</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/document/cookie?redirectlocale=en-US&amp;redirectslug=DOM%2Fdocument.cookie">MDN document.cookie</a></li>
+</ol>
+
+    </div>
+
+    <div class="important">
+        <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-3880667676094519"
+             data-ad-slot="3754878786"
+             data-ad-format="auto"></ins>
+        <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+    </div>
+
+    <div class="info">
+        <h1>MZhou&#39;s blog - Taste of life.</h1>
+        <p>
+            <a href="https://github.com/zmmbreeze" target="_blank">zmmbreeze</a> / <a href="https://twitter.com/zhoumm">@zhoumm</a>
+        </p>
+    </div>
+
+    <!-- Google Tag Manager -->
+    <noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-MP42BH"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    '//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-MP42BH');</script>
+    <!-- End Google Tag Manager -->
+</div>
+</body>
+</html>

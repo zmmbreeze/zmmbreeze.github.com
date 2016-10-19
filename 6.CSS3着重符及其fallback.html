@@ -89,7 +89,7 @@
 </code></pre><h3 id="-">五</h3>
 <p>最后一个问题的解决方案则比较简单粗暴。获取<code>navigator.language || navigator.browserLanguage</code>的值判断其所处的语言环境。</p>
 <h3 id="jquery-emphasis-js">jQuery.emphasis.js</h3>
-<p>解决了这些问题之后，终于得到了一个可用的fallback。再根据标准来修改优化代码，就得到了<a href="https://github.com/zmmbreeze/jquery.emphasis">jQuery.emphasis.js</a>。这里有些它的<a href="http://nodejs.in/jquery.emphasis/demo.html">demo</a>。不过它没有解决所有的问题，目前已知的缺陷如下：</p>
+<p>解决了这些问题之后，终于得到了一个可用的fallback。再根据标准来修改优化代码，就得到了<a href="https://github.com/zmmbreeze/jquery.emphasis">jQuery.emphasis.js</a>。这里有些它的<a href="http://zencode.in/jquery.emphasis/">demo</a>。不过它没有解决所有的问题，目前已知的缺陷如下：</p>
 <ol>
 <li>不支持竖排（即不支持<code>position</code>为<code>right/left</code>）</li>
 <li>不支持特殊情况下的<code>inline-block</code>元素（比如默认元素有<code>padding-bottom</code>）</li>
@@ -118,15 +118,15 @@
         </p>
     </div>
 
-    <script>
-    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-    ga('create', 'UA-36422454-1', 'auto');
-    ga('send', 'pageview');
-    </script>
+    <!-- Google Tag Manager -->
+    <noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-MP42BH"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    '//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-MP42BH');</script>
+    <!-- End Google Tag Manager -->
 </div>
 </body>
 </html>

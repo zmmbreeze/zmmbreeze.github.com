@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>GA源代码里的小技巧之preview和prerender</title>
+    <meta name ="viewport" content ="initial-scale=1, user-scalable=no, width=device-width">
+    <link rel="stylesheet" href="./assets/blog.css" />
+    <link rel="stylesheet" href="./assets/entry.css" />
+    <link rel="stylesheet" href="./assets/highlight.css" />
+</head>
+<body>
+<div class="main">
+    <a class="back" href="./">MZhou's blog</a>
+    <div class="entry">
+        <h1 id="ga-preview-prerender">GA源代码里的小技巧之preview和prerender</h1>
+<blockquote>
+<p>作者前段时间在做类似Google Analytics（以下简称GA）的第三方监控脚本。所以对GA的前端代码做过调研，对GA的压缩后代码做了一定程度上的<a href="https://gist.github.com/zmmbreeze/ddb4b3a619187b923dc2c009b4323a42">人肉美化</a>。这里美化的是<a href="https://www.google-analytics.com/analytics.js">analytics.js</a>的j41版本，本文提到的小技巧也是基于这个版本的js。</p>
+</blockquote>
+<h2 id="-preview-"><code>preview</code></h2>
+<p>Safari浏览器有个Top site功能，它会展示最长访问的几个页面的截图。示例如下：</p>
+<p><img src="https://cloud.githubusercontent.com/assets/249872/18608514/e796690e-7d1d-11e6-9206-7fd3aa2c0ee8.png" alt=""></p>
+<p>Safari会去真正的加载解析这几个站点页面，然后截图并保存。当用户点开这些站点时会再次加载解析这些页面。</p>
+<p>GA的功能是统计正常用户的访问情况，很明显这种情况已经不是正常的访问了，所以对这种情况做了过滤。凡是是预览（preview）请求都不会执行自己的主要逻辑。示例代码如下：</p>
+<pre><code class="lang-javascript"><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">isPreviewLoad</span><span class="hljs-params">(win)</span> </span>{
+    win = win || <span class="hljs-built_in">window</span>;
+    <span class="hljs-keyword">var</span> api = <span class="hljs-string">'navigator'</span>;
+    <span class="hljs-keyword">return</span> win[api] &amp;&amp; win[api].loadPurpose === <span class="hljs-string">'preview'</span>;
+};
+
+<span class="hljs-keyword">if</span> (isPreviewLoad()) {
+    <span class="hljs-comment">// TODO</span>
+}
+</code></pre>
+<h2 id="-prerender-"><code>prerender</code></h2>
+<p><a href="https://www.w3.org/TR/resource-hints/#introduction">W3C标准（WD）</a>中有个<code>prerender</code>特性。如果在指定页面<code>index.html</code>的HTML代码头部中加入如下的<code>meta</code>标签：</p>
+<pre><code class="lang-html"><span class="hljs-doctype">&lt;!DOCTYPE html&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">head</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">meta</span> <span class="hljs-attribute">charset</span>=<span class="hljs-value">"utf-8"</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">title</span>&gt;</span>index.html<span class="hljs-tag">&lt;/<span class="hljs-title">title</span>&gt;</span>
+<span class="hljs-comment">&lt;!-- 预渲染 --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">link</span> <span class="hljs-attribute">rel</span>=<span class="hljs-value">"prerender"</span> <span class="hljs-attribute">href</span>=<span class="hljs-value">"./article.html"</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-title">head</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">body</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">a</span> <span class="hljs-attribute">href</span>=<span class="hljs-value">"./article.html"</span>&gt;</span>文章地址<span class="hljs-tag">&lt;/<span class="hljs-title">a</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">body</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-title">html</span>&gt;</span>
+</code></pre>
+<p>那么浏览器在加载<code>index.html</code>的时候，会预先加载渲染<code>article.html</code>页面，但是不展现。当浏览器真正点开页面中<code>article.html</code>页面的地址时，浏览器才会再真正的展现这个页面。不过用户也有可能不再点击<code>article.html</code>的地址，而是直接离开了或是跳去别的页面。目前<a href="https://msdn.microsoft.com/en-us/library/dn265039(v=vs.85">IE&gt;=11</a>.aspx)、<a href="http://caniuse.com/#search=prerender">Chrome&gt;=13</a>、Opera&gt;=15都支持了这个特性。</p>
+<p>GA为了避免发送无用的统计，也过滤掉了预渲染的情况，在页面真正展示的时候再执行自己的主逻辑。它通过浏览器提供的<a href="http://www.w3.org/TR/page-visibility/">Page Visibility API</a>来判断当页面处于的状态。如果页面是预渲染，那么页面渲染时<code>document.visibilityState</code>的值为<code>prerender</code>。然后监听<code>visiableChange</code>事件，当页面可见之后开始执行业务主逻辑。</p>
+<p>综合<code>preview</code>和<code>prerender</code>两种情况，我们可以用如下代码来判断是否需要执行自己的业务主逻辑：</p>
+<pre><code class="lang-javascript"><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">start</span><span class="hljs-params">(win, main)</span> </span>{
+    <span class="hljs-keyword">if</span> (isPreviewLoad(win)) {
+        <span class="hljs-keyword">return</span>;
+    }
+
+    <span class="hljs-keyword">var</span> doc = win.document;
+    <span class="hljs-keyword">var</span> executed = <span class="hljs-literal">false</span>;
+    <span class="hljs-keyword">var</span> isPrerender = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">()</span> </span>{
+        <span class="hljs-keyword">return</span> doc.visibilityState === <span class="hljs-string">'prerender'</span>;
+    };
+    <span class="hljs-keyword">var</span> cb = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">()</span> </span>{
+        <span class="hljs-keyword">if</span> (!executed &amp;&amp; !isPrerender(win)) {
+            executed = <span class="hljs-literal">true</span>;
+            main();
+            <span class="hljs-comment">// 解除事件监听</span>
+            off(doc, <span class="hljs-string">'visibilitychange'</span>, cb);
+        }
+    };
+
+    <span class="hljs-keyword">if</span> (isPrerender(win)) {
+        <span class="hljs-comment">// 添加事件监听</span>
+        on(doc, <span class="hljs-string">'visibilitychange'</span>, cb);
+        <span class="hljs-keyword">return</span>;
+    }
+    main();
+}
+start(<span class="hljs-built_in">window</span>, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">()</span> </span>{
+    <span class="hljs-comment">// TODO 业务主逻辑</span>
+});
+</code></pre>
+<p>参考资料：</p>
+<ol>
+<li><a href="http://stackoverflow.com/a/11081104">Safari Top Sites Preview</a></li>
+<li><a href="http://caniuse.com/#search=prerender">CanIUse</a></li>
+<li><a href="https://msdn.microsoft.com/en-us/library/dn265039(v=vs.85">IE Prerender and prefetch support</a>.aspx)</li>
+<li><a href="https://www.w3.org/TR/resource-hints/#introduction">W3C Resource Hints Spec</a></li>
+<li><a href="https://css-tricks.com/prefetching-preloading-prebrowsing/">Prefetching, preloading, prebrowsing</a></li>
+</ol>
+
+    </div>
+
+    <div class="important">
+        <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-3880667676094519"
+             data-ad-slot="3754878786"
+             data-ad-format="auto"></ins>
+        <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+    </div>
+
+    <div class="info">
+        <h1>MZhou&#39;s blog - Taste of life.</h1>
+        <p>
+            <a href="https://github.com/zmmbreeze" target="_blank">zmmbreeze</a> / <a href="https://twitter.com/zhoumm">@zhoumm</a>
+        </p>
+    </div>
+
+    <!-- Google Tag Manager -->
+    <noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-MP42BH"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    '//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-MP42BH');</script>
+    <!-- End Google Tag Manager -->
+</div>
+</body>
+</html>
