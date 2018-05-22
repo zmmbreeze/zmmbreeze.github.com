@@ -34,7 +34,7 @@
 </code></pre><p>在这次更新之前，为了在Chrome中与其他DOM属性保持一致，一定要为每个实例增加新的<code>isSuperContentEditable</code>属性。为页面上的每一个<code>HTMLDivElement</code>实例创建新属性是非常低效的。</p>
 <p>这些更新对Web平台的一致性、性能和规范化都很重要。当然这也会带来一些不兼容的问题。如果你以前依赖过Chrome或Webkit的这个特性，强烈建议检查下自己的站点并阅读下面的更新总结。</p>
 <h2 id="-">更新总结</h2>
-<h3 id="-dom-hasownproperties-false-">在DOM实例上调用<code>hasOwnProperties</code>现在会返回<code>false</code></h3>
+<h3 id="-dom-hasownproperties-false">在DOM实例上调用<code>hasOwnProperties</code>现在会返回<code>false</code></h3>
 <p>有时开发者会调用<code>hasOwnProperties</code>方法来检查属性是否某个对象上。以后这将不再起作用。因为DOM属性都移动到了原型链中，而<code>hasOwnProperties</code>方法不会检查原型链上是否有这个属性。</p>
 <p>在Chrome 42及以前版本中，如下代码的执行结果为<code>true</code>。</p>
 <pre><code>&gt; <span class="hljs-keyword">div</span> = document.createElement(<span class="hljs-string">"div"</span>);
